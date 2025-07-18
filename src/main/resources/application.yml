@@ -1,3 +1,6 @@
+server:
+  port: 8888
+
 spring:
   datasource:
     url: jdbc:postgresql://${TRANSITLINK_DB_HOST}:${TRANSITLINK_DB_PORT}/${TRANSITLINK_DB_NAME}
@@ -28,5 +31,9 @@ spring:
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
 
-server:
-  port: 8888
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${ISSUER_URI}
+          jwk-set-uri: ${JWK_SET_URI}
