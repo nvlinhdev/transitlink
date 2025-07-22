@@ -1,1 +1,1 @@
-rootProject.name = "TransitLink"
+rootProject.name = "transitlink"

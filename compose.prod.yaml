@@ -1,4 +1,36 @@
 services:
+  nginx:
+    image: nginx:1.29.0-alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/nginx/certs
+      - ./nginx/html:/usr/share/nginx/html
+    networks:
+      - backend
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/dns-cloudflare:v4.1.1
+    container_name: certbot
+    volumes:
+      - certbot_etc:/etc/letsencrypt
+      - ./cloudflare.ini:/root/cloudflare.ini
+    command: >-
+      certonly --dns-cloudflare
+      --dns-cloudflare-credentials /root/cloudflare.ini
+      --dns-cloudflare-propagation-seconds 15
+      --email YOUR@EMAIL.COM
+      --agree-tos --no-eff-email
+      --force-renewal
+      -d domain1.com
+      -d *.domain1.com
+      -d domain2.com
+      -d *.domain2.com
+
   transitlink-db:
     image: postgres:17.5-alpine
     container_name: transitlink-db
@@ -86,8 +118,7 @@ services:
       start_period: 60s
 
   transitlink-app:
-    build: .
-    container_name: transitlink-app
+    image: linhnv/transitlink:latest
     environment:
       TRANSITLINK_DB_HOST: transitlink-db
       TRANSITLINK_DB_PORT: 5432

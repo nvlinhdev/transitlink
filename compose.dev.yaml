@@ -70,8 +70,6 @@ services:
       KEYCLOAK_ENABLE_HEALTH_ENDPOINTS: true
     ports:
       - "8080:8080"
-    volumes:
-      - ./keycloak/realms:/docker-entrypoint-initdb.d
     depends_on:
       keycloak-db:
         condition: service_healthy
@@ -86,7 +84,9 @@ services:
       start_period: 60s
 
   transitlink-app:
-    build: .
+    build:
+        context: .
+        dockerfile: Dockerfile.dev
     container_name: transitlink-app
     environment:
       TRANSITLINK_DB_HOST: transitlink-db
@@ -101,6 +101,8 @@ services:
       JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
     ports:
       - "8888:8888"
+    volumes:
+      - ./build/libs/transitlink-1.0.0-SNAPSHOT.jar:/app/app.jar
     depends_on:
       transitlink-db:
         condition: service_healthy
