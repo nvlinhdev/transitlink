@@ -46,4 +46,4 @@ management:
 storage:
   provider: local
   root-path: ./storage
-  base-url: http://localhost:8888/api/storage/files
+  base-url: http://${TRANSITLINK_HOST}/api/storage/files
