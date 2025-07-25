@@ -28,6 +28,10 @@ spring:
         jwt:
           issuer-uri: ${ISSUER_URI}
           jwk-set-uri: ${JWK_SET_URI}
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 management:
   endpoints:
@@ -39,6 +43,7 @@ management:
       probes:
         enabled: true
 
-logging:
-  level:
-    org.springframework.web: debug
+storage:
+  provider: local
+  root-path: ./storage
+  base-url: http://localhost:8888/api/storage/files

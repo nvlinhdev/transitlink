@@ -1,4 +1,10 @@
 services:
+  redis:
+    ports:
+      - 6379:6379
+  transitlink-db:
+    ports:
+      - 5432:5432
   transitlink:
     build:
       context: ../
