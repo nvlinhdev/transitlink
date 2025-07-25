@@ -4,8 +4,8 @@ gradle/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
-!.env
-.env.*
+!docker-compose/.env.example
+docker-compose/.env.*
 
 ### STS ###
 .apt_generated
