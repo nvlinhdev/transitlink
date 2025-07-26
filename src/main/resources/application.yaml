@@ -1,0 +1,89 @@
+server:
+  port: 8888
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${TRANSITLINK_DB_HOST}:${TRANSITLINK_DB_PORT}/${TRANSITLINK_DB_NAME}
+    username: ${TRANSITLINK_DB_USER}
+    password: ${TRANSITLINK_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate.format_sql: true
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${ISSUER_URI}
+          jwk-set-uri: ${JWK_SET_URI}
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+storage:
+  provider: local
+  root-path: ./storage
+  base-url: http://${TRANSITLINK_DOMAIN}/api/storage/files
+
+# SpringDoc configuration for API documentation
+springdoc:
+  api-docs:
+    enabled: true # change false to disable API docs on production
+
+  swagger-ui:
+    enabled: true # change false to disable Swagger UI on production
+
+  # when api-doc and swagger-ui are disabled, all of these properties can be ignored
+    oauth:
+      client-id: web-app
+      use-pkce-with-authorization-code-grant: true
+
+  info:
+    title: TransitLink API
+    version: 1.0.0
+    description: API documentation for the TransitLink application
+
+  servers:
+    - url: http://localhost:8888
+      description: Local development server
+    - url: https://api.transitlink.fpt.edu.vn
+      description: Containerized depvloyment server
+
+  oauth:
+    authorization-url: http://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/auth
+    token-url: http://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token
+    refresh-url: http://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token
+    scopes:
+      openid: OpenID scope
+      email: User email
+      offline_access: Offline access (refresh token)
+
+  groups:
+    - group: profile
+      paths: /api/profiles/**
+    - group: storage
+      paths: /api/storage/**
