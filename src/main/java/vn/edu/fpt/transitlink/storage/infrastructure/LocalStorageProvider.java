@@ -1,7 +1,9 @@
 package vn.edu.fpt.transitlink.storage.infrastructure;
 
+import lombok.extern.slf4j.Slf4j;
+import vn.edu.fpt.transitlink.shared.exception.BusinessException;
+import vn.edu.fpt.transitlink.shared.exception.ErrorCode;
 import vn.edu.fpt.transitlink.storage.domain.model.FileInfo;
-import vn.edu.fpt.transitlink.storage.domain.exception.StorageException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -13,6 +15,7 @@ import java.time.format.DateTimeFormatter;
 
 @Component
 @ConditionalOnProperty(name = "storage.provider", havingValue = "local", matchIfMissing = true)
+@Slf4j
 public class LocalStorageProvider implements StorageProvider {
 
     private final Path rootPath;
@@ -22,14 +25,18 @@ public class LocalStorageProvider implements StorageProvider {
                                 @Value("${storage.base-url:http://localhost:8888/api/storage/files}") String baseUrl) {
         this.rootPath = Paths.get(rootPath);
         this.baseUrl = baseUrl;
+        log.info("Initializing LocalStorageProvider with path: {}", this.rootPath.toAbsolutePath());
+
         initStorage();
     }
 
     private void initStorage() {
         try {
             Files.createDirectories(rootPath);
+            log.info("Storage directory initialized at: {}", rootPath.toAbsolutePath());
         } catch (IOException e) {
-            throw new StorageException("Failed to create storage directory", e);
+            log.error("Failed to create storage directory at {}: {}", rootPath.toAbsolutePath(), e.getMessage());
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Failed to create storage directory", e);
         }
     }
 
@@ -40,7 +47,7 @@ public class LocalStorageProvider implements StorageProvider {
             Files.createDirectories(filePath.getParent());
             Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            throw new StorageException("Failed to store file", e);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Failed to store file", e);
         }
     }
 
@@ -50,7 +57,7 @@ public class LocalStorageProvider implements StorageProvider {
             Path filePath = getFilePath(fileInfo);
             return Files.newInputStream(filePath);
         } catch (IOException e) {
-            throw new StorageException("Failed to retrieve file", e);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Failed to retrieve file", e);
         }
     }
 
@@ -60,7 +67,7 @@ public class LocalStorageProvider implements StorageProvider {
             Path filePath = getFilePath(fileInfo);
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
-            throw new StorageException("Failed to delete file", e);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Failed to delete file", e);
         }
     }
 

@@ -1,15 +1,24 @@
 package vn.edu.fpt.transitlink.shared.exception;
-/**
- * Base class for all business logic exceptions.
- */
-public abstract class BusinessException extends RuntimeException {
-    /**
-     * Constructs a BusinessException with the specified detail message.
-     *
-     * @param message the detail message explaining the reason for the exception
-     */
-    protected BusinessException(String message) {
+
+public class BusinessException extends RuntimeException {
+    private final ErrorCode errorCode;
+
+    public BusinessException(ErrorCode errorCode) {
+        super(errorCode.getDefaultMessage());
+        this.errorCode = errorCode;
+    }
+
+    public BusinessException(ErrorCode errorCode, String message) {
         super(message);
+        this.errorCode = errorCode;
+    }
+
+    public BusinessException(ErrorCode errorCode, String message, Throwable cause) {
+        super(message, cause);
+        this.errorCode = errorCode;
+    }
+
+    public ErrorCode getErrorCode() {
+        return errorCode;
     }
 }
-

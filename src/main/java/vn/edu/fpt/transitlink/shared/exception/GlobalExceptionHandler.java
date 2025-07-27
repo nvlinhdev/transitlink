@@ -1,20 +1,27 @@
 package vn.edu.fpt.transitlink.shared.exception;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import vn.edu.fpt.transitlink.shared.dto.ErrorResponse;
+import vn.edu.fpt.transitlink.shared.dto.ValidationError;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -24,110 +31,297 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    // Handle generic exceptions
+
+    // Handle business exceptions
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex, HttpServletRequest request) {
+        // Business exceptions are expected, so use WARN level
+        log.warn("Business exception occurred - Code: {}, Path: {}, Message: {}",
+                ex.getErrorCode().getCode(), request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                ex.getErrorCode().getCode(),
+                request.getRequestURI(),
+                ex.getErrorCode().getHttpStatus().value()
+        );
+        return new ResponseEntity<>(errorResponse, ex.getErrorCode().getHttpStatus());
+    }
+
+    // Handle Unexpected exceptions
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", request.getRequestURI(), ex);
+    public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception ex, HttpServletRequest request) {
+        // Unexpected exceptions are serious issues, use ERROR level with full stack trace
+        log.error("Unexpected exception occurred - Path: {}, Exception: {}",
+                request.getRequestURI(), ex.getClass().getSimpleName(), ex);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                "Unexpected exception occurred",
+                ex.getClass().getSimpleName(),
+                request.getRequestURI(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    // Handle bad request exceptions
-    @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI(), ex);
-    }
-
-    // Handle not found exceptions
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI(), ex);
-    }
-
-    // Handle unauthorized exceptions
-    @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI(), ex);
-    }
-
-    // Handle validation errors
+    // Handle validation errors (@Valid annotation)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        String errors = ex.getBindingResult()
+        // Validation errors are client errors, use INFO level
+        log.info("Validation failed - Path: {}, Fields: {}",
+                request.getRequestURI(),
+                ex.getBindingResult().getFieldErrors().stream()
+                        .map(error -> error.getField())
+                        .collect(Collectors.joining(", ")));
+
+        List<ValidationError> validationErrors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> new ValidationError(
+                        error.getField(),
+                        error.getDefaultMessage(),
+                        error.getRejectedValue()
+                ))
+                .toList();
+
+        // Also create a summary message
+        String errorSummary = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining("; "));
 
-        return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed: " + errors, request.getRequestURI(), ex);
+        ErrorResponse errorResponse = new ErrorResponse(
+                "Validation failed: " + errorSummary,
+                "MethodArgumentNotValidException",
+                request.getRequestURI(),
+                HttpStatus.BAD_REQUEST.value(),
+                validationErrors
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-    // Handle constraint violations
+    // Handle constraint violations (@Validated annotation)
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
-        String errors = ex.getConstraintViolations()
+        // Constraint violations are client errors, use INFO level
+        log.info("Constraint violation - Path: {}, Violations: {}",
+                request.getRequestURI(),
+                ex.getConstraintViolations().stream()
+                        .map(cv -> cv.getPropertyPath().toString())
+                        .collect(Collectors.joining(", ")));
+
+        List<ValidationError> validationErrors = ex.getConstraintViolations()
+                .stream()
+                .map(cv -> new ValidationError(
+                        cv.getPropertyPath().toString(),
+                        cv.getMessage(),
+                        cv.getInvalidValue()
+                ))
+                .toList();
+
+        String errorSummary = ex.getConstraintViolations()
                 .stream()
                 .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
                 .collect(Collectors.joining("; "));
 
-        return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed: " + errors, request.getRequestURI(), ex);
+        ErrorResponse errorResponse = new ErrorResponse(
+                "Validation failed: " + errorSummary,
+                "ConstraintViolationException",
+                request.getRequestURI(),
+                HttpStatus.BAD_REQUEST.value(),
+                validationErrors
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     // Handle Spring Security Access Denied
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.FORBIDDEN, "Access Denied", request.getRequestURI(), ex);
+        // Security violations should be logged for monitoring, use WARN level
+        log.warn("Access denied - Path: {}, User: {}, Message: {}",
+                request.getRequestURI(),
+                request.getRemoteUser() != null ? request.getRemoteUser() : "anonymous",
+                ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                "Access denied - insufficient permissions",
+                "AccessDeniedException",
+                request.getRequestURI(),
+                HttpStatus.FORBIDDEN.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
     }
 
     // Handle Spring Security Authorization Denied
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAuthorizationDenied(AuthorizationDeniedException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI(), ex);
+        // Security violations should be logged for monitoring, use WARN level
+        log.warn("Authorization denied - Path: {}, User: {}, Message: {}",
+                request.getRequestURI(),
+                request.getRemoteUser() != null ? request.getRemoteUser() : "anonymous",
+                ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage() != null ? ex.getMessage() : "Authorization denied",
+                "AuthorizationDeniedException",
+                request.getRequestURI(),
+                HttpStatus.FORBIDDEN.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
     }
 
     // Handle unsupported HTTP methods
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage(), request.getRequestURI(), ex);
+        // Client configuration errors, use INFO level
+        log.info("Method not supported - Path: {}, Method: {}, Supported: {}",
+                request.getRequestURI(),
+                ex.getMethod(),
+                ex.getSupportedHttpMethods());
+
+        String supportedMethods = ex.getSupportedHttpMethods() != null ?
+                ex.getSupportedHttpMethods().toString() : "N/A";
+        String message = String.format("Method '%s' not supported. Supported methods: %s",
+                ex.getMethod(), supportedMethods);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                message,
+                "HttpRequestMethodNotSupportedException",
+                request.getRequestURI(),
+                HttpStatus.METHOD_NOT_ALLOWED.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     // Handle malformed JSON
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
-        String message = "Malformed JSON request or invalid data format.";
-        return buildResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI(), ex);
+        // Client input errors, use INFO level
+        log.info("Malformed JSON request - Path: {}, Cause: {}",
+                request.getRequestURI(),
+                ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "Unknown");
+
+        String message = "Malformed JSON request or invalid data format";
+        if (ex.getCause() instanceof JsonParseException) {
+            message = "Invalid JSON format: " + ex.getCause().getMessage();
+        } else if (ex.getCause() instanceof JsonMappingException) {
+            message = "JSON mapping error: " + ex.getCause().getMessage();
+        }
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                message,
+                "HttpMessageNotReadableException",
+                request.getRequestURI(),
+                HttpStatus.BAD_REQUEST.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     // Handle missing request parameter
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingParams(MissingServletRequestParameterException ex, HttpServletRequest request) {
-        String message = "Missing required parameter: " + ex.getParameterName();
-        return buildResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI(), ex);
+        // Client input errors, use INFO level
+        log.info("Missing required parameter - Path: {}, Parameter: {} ({})",
+                request.getRequestURI(),
+                ex.getParameterName(),
+                ex.getParameterType());
+
+        String message = String.format("Missing required parameter: '%s' of type '%s'",
+                ex.getParameterName(), ex.getParameterType());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                message,
+                "MissingServletRequestParameterException",
+                request.getRequestURI(),
+                HttpStatus.BAD_REQUEST.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     // Handle type mismatch (e.g., wrong param type)
     @ExceptionHandler(TypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(TypeMismatchException ex, HttpServletRequest request) {
-        String message = "Invalid value for parameter: " + ex.getPropertyName();
-        return buildResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI(), ex);
+        // Client input errors, use INFO level
+        log.info("Type mismatch - Path: {}, Parameter: {}, Value: {}, Expected: {}",
+                request.getRequestURI(),
+                ex.getPropertyName(),
+                ex.getValue(),
+                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
+
+        String message = String.format("Invalid value '%s' for parameter '%s'. Expected type: %s",
+                ex.getValue(), ex.getPropertyName(),
+                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                message,
+                "TypeMismatchException",
+                request.getRequestURI(),
+                HttpStatus.BAD_REQUEST.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-    /**
-     * Builds a standardized error response.
-     *
-     * @param status  the HTTP status
-     * @param message the error message
-     * @param path    the request path
-     * @param ex      the exception (optional, can be null)
-     * @return a ResponseEntity containing the ErrorResponse
-     */
-    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message, String path, Exception ex) {
-        // Log error with stacktrace for debugging
-        if (status.is5xxServerError()) {
-            log.error("[{}] {} - {}", status.value(), message, path, ex);
-        } else {
-            log.warn("[{}] {} - {}", status.value(), message, path);
+    // Handle illegal argument exceptions
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        // Could be client or server issue, use WARN level
+        log.warn("Illegal argument - Path: {}, Message: {}",
+                request.getRequestURI(),
+                ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                "IllegalArgumentException",
+                request.getRequestURI(),
+                HttpStatus.BAD_REQUEST.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    // Handle data integrity violations
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+        // Database issues should be monitored, use WARN level
+        log.warn("Data integrity violation - Path: {}, Cause: {}",
+                request.getRequestURI(),
+                ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "Unknown");
+
+        String message = "Data integrity violation";
+        if (ex.getCause() instanceof ConstraintViolationException) {
+            message = "Database constraint violation - possible duplicate entry or foreign key constraint";
         }
 
-        ErrorResponse error = ErrorResponse.of(status.value(), status.getReasonPhrase(), message, path);
-        return ResponseEntity.status(status).body(error);
+        ErrorResponse errorResponse = new ErrorResponse(
+                message,
+                "DataIntegrityViolationException",
+                request.getRequestURI(),
+                HttpStatus.CONFLICT.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
+    // Handle HTTP media type not supported
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        // Client configuration errors, use INFO level
+        log.info("Media type not supported - Path: {}, Content-Type: {}, Supported: {}",
+                request.getRequestURI(),
+                ex.getContentType(),
+                ex.getSupportedMediaTypes());
+
+        String supportedTypes = ex.getSupportedMediaTypes().toString();
+        String message = String.format("Media type '%s' not supported. Supported types: %s",
+                ex.getContentType(), supportedTypes);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                message,
+                "HttpMediaTypeNotSupportedException",
+                request.getRequestURI(),
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     }
 }

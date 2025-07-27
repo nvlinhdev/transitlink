@@ -1,4 +1,4 @@
-package vn.edu.fpt.transitlink.storage.api.dto;
+package vn.edu.fpt.transitlink.storage.presentation.dto;
 
 import vn.edu.fpt.transitlink.storage.domain.model.FileInfo;
 import vn.edu.fpt.transitlink.storage.domain.model.FileType;

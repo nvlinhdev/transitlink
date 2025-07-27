@@ -29,6 +29,6 @@ public class UserProfile {
     @Column(nullable = false)
     private String phoneNumber;
     private String gender;
-    private String zaloUrl;
+    private String zaloPhoneNumber;
     private String avatarUrl;
 }

@@ -1,13 +1,14 @@
 package vn.edu.fpt.transitlink.profile.application;
 
-import vn.edu.fpt.transitlink.profile.api.dto.CreateProfileRequest;
-import vn.edu.fpt.transitlink.profile.api.dto.UserProfileResponse;
+import vn.edu.fpt.transitlink.profile.presentation.dto.CreateProfileRequest;
+import vn.edu.fpt.transitlink.profile.presentation.dto.UserProfileDTO;
 import vn.edu.fpt.transitlink.profile.domain.event.ProfileCreatedEvent;
-import vn.edu.fpt.transitlink.profile.domain.exception.ProfileAlreadyExistsException;
 import vn.edu.fpt.transitlink.profile.domain.model.UserProfile;
 import vn.edu.fpt.transitlink.profile.domain.repository.UserProfileRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import vn.edu.fpt.transitlink.shared.exception.BusinessException;
+import vn.edu.fpt.transitlink.shared.exception.ErrorCode;
 
 import java.util.UUID;
 
@@ -22,25 +23,25 @@ public class ProfileService {
         this.eventPublisher = eventPublisher;
     }
 
-    public UserProfileResponse createProfile(UUID accountId, CreateProfileRequest request) {
+    public UserProfileDTO createProfile(UUID accountId, CreateProfileRequest request) {
         if (repository.existsByAccountId(accountId)) {
-            throw new ProfileAlreadyExistsException(accountId);
+            throw new BusinessException(ErrorCode.PROFILE_ALREADY_EXISTS, "Profile already exists for account: " + accountId);
         }
 
-        UserProfile profile = new UserProfile(null,accountId, request.firstName(), request.lastName(), request.phoneNumber(), request.gender(), request.zaloUrl(), request.avatarUrl());
+        UserProfile profile = new UserProfile(null, accountId, request.firstName(), request.lastName(), request.phoneNumber(), request.gender(), request.zaloPhoneNumber(), request.avatarUrl());
         repository.save(profile);
 
         // Publish domain event
         eventPublisher.publishEvent(new ProfileCreatedEvent(accountId));
 
-        return new UserProfileResponse(
+        return new UserProfileDTO(
                 profile.getId(),
                 profile.getAccountId(),
                 profile.getFirstName(),
                 profile.getLastName(),
                 profile.getPhoneNumber(),
                 profile.getGender(),
-                profile.getZaloUrl(),
+                profile.getZaloPhoneNumber(),
                 profile.getAvatarUrl()
         );
     }

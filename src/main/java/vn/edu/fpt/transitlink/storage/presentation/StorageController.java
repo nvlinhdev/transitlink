@@ -1,14 +1,14 @@
-package vn.edu.fpt.transitlink.storage.api;
+package vn.edu.fpt.transitlink.storage.presentation;
 
-import vn.edu.fpt.transitlink.storage.api.dto.FileResponse;
-import vn.edu.fpt.transitlink.storage.api.dto.FileUrlResponse;
+import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
+import vn.edu.fpt.transitlink.storage.presentation.dto.FileResponse;
+import vn.edu.fpt.transitlink.storage.presentation.dto.FileUrlResponse;
 import vn.edu.fpt.transitlink.storage.application.StorageService;
 import vn.edu.fpt.transitlink.storage.domain.model.FileInfo;
 import vn.edu.fpt.transitlink.storage.domain.model.FileType;
 import vn.edu.fpt.transitlink.storage.infrastructure.StorageProvider;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -35,15 +35,15 @@ public class StorageController {
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileResponse> uploadFile(
+    public ResponseEntity<StandardResponse<FileResponse>> uploadFile(
             @RequestParam("file") MultipartFile file,
             Authentication authentication) {
 
         String userId = authentication.getName();
         FileInfo fileInfo = storageService.uploadFile(file, userId);
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(FileResponse.from(fileInfo));
+        return ResponseEntity
+                .status(201)
+                .body(StandardResponse.success(FileResponse.from(fileInfo)));
     }
 
     @GetMapping("/{id}")

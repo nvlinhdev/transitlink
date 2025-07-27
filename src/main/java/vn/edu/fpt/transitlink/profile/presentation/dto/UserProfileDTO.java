@@ -1,14 +1,14 @@
-package vn.edu.fpt.transitlink.profile.api.dto;
+package vn.edu.fpt.transitlink.profile.presentation.dto;
 
 import java.util.UUID;
 
-public record UserProfileResponse(
+public record UserProfileDTO(
         UUID id,
         UUID accountId,
         String firstName,
         String lastName,
         String phoneNumber,
         String gender,
-        String zaloUrl,
+        String zaloPhoneNumber,
         String avatarUrl
 ) {}

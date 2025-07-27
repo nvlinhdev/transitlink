@@ -2,7 +2,8 @@ package vn.edu.fpt.transitlink.storage.application;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.edu.fpt.transitlink.storage.domain.exception.*;
+import vn.edu.fpt.transitlink.shared.exception.BusinessException;
+import vn.edu.fpt.transitlink.shared.exception.ErrorCode;
 import vn.edu.fpt.transitlink.storage.domain.model.FileInfo;
 import vn.edu.fpt.transitlink.storage.domain.model.FileType;
 import vn.edu.fpt.transitlink.storage.domain.repository.FileInfoRepository;
@@ -64,7 +65,8 @@ public class StorageService {
 
         } catch (Exception e) {
             logger.error("Upload failed: {}", multipartFile.getOriginalFilename(), e);
-            throw new StorageException("Upload failed: " + e.getMessage(), e);
+            throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED,
+                    "Failed to upload file: " + multipartFile.getOriginalFilename(), e);
         }
     }
 
@@ -76,18 +78,19 @@ public class StorageService {
     @Transactional(readOnly = true)
     public InputStream downloadFile(UUID id) {
         FileInfo fileInfo = fileInfoRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new FileNotFoundException("File not found: " + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "File not found: " + id));
 
         try {
             return storageProvider.retrieve(fileInfo);
         } catch (Exception e) {
-            throw new StorageException("Download failed: " + e.getMessage(), e);
+            throw new BusinessException(ErrorCode.FILE_DOWNLOAD_FAILED,
+                    "Failed to download file: " + fileInfo.getOriginalName(), e);
         }
     }
 
     public void deleteFile(UUID id, String deletedBy) {
         FileInfo fileInfo = fileInfoRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new FileNotFoundException("File not found: " + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "File not found: " + id));
 
         try {
             // Soft delete in database
@@ -99,7 +102,8 @@ public class StorageService {
 
             logger.info("File deleted: {} by {}", fileInfo.getOriginalName(), deletedBy);
         } catch (Exception e) {
-            throw new StorageException("Delete failed: " + e.getMessage(), e);
+            throw new BusinessException(ErrorCode.FILE_DELETE_FAILED,
+                    "Failed to delete file: " + fileInfo.getOriginalName(), e);
         }
     }
 
@@ -115,17 +119,18 @@ public class StorageService {
 
     private void validateFile(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new InvalidFileException("File is empty");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "File must not be empty");
         }
 
         FileType type = FileType.fromContentType(file.getContentType());
         if (!type.isAllowed()) {
-            throw new InvalidFileException("File type not allowed: " + file.getContentType());
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    String.format("File type %s is not allowed", file.getContentType()));
         }
 
         long maxSize = getMaxSizeForType(type);
         if (file.getSize() > maxSize) {
-            throw new FileSizeExceededException(
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
                     String.format("File size %d exceeds limit %d", file.getSize(), maxSize));
         }
     }

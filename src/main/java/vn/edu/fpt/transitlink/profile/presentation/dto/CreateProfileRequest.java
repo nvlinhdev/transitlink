@@ -1,4 +1,4 @@
-package vn.edu.fpt.transitlink.profile.api.dto;
+package vn.edu.fpt.transitlink.profile.presentation.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
@@ -7,6 +7,6 @@ public record CreateProfileRequest(
         @NotBlank String lastName,
         @NotBlank String phoneNumber,
         String gender,
-        String zaloUrl,
+        String zaloPhoneNumber,
         String avatarUrl
 ) {}
