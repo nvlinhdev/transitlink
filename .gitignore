@@ -6,9 +6,8 @@ build/
 !**/src/test/**/build/
 !docker-compose/.env.example
 docker-compose/.env.*
-docker-compose/storage-data/**
-storage/**
-
+docker-compose/transitlink/data
+docker-compose/transitlink/logs
 
 ### STS ###
 .apt_generated

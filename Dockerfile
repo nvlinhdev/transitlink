@@ -1,13 +1,16 @@
 FROM eclipse-temurin:21-jre-alpine
-WORKDIR /app
+WORKDIR /transitlink
 
-# Add user
-RUN addgroup -S transitlinkgroup && adduser -S transitlink -G transitlinkgroup
+RUN addgroup -S transitlinkgroup && adduser -S transitlink -G transitlinkgroup \
+    && mkdir -p /transitlink/logs /transitlink/data /transitlink/config \
+    && chown -R transitlink:transitlinkgroup /transitlink
+
 USER transitlink
 
-COPY build/libs/*.jar app.jar
+COPY build/libs/*.jar transitlink.jar
+COPY --chown=transitlink:transitlinkgroup src/main/resources/application*.yaml /transitlink/config/
 
-# Expose application port
-EXPOSE 8888
+ENV JAVA_TOOL_OPTIONS="-Dspring.config.location=file:/transitlink/config/"
+ENV JAVA_OPTS="-Xms512m -Xmx1024m"
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java ${JAVA_OPTS} -jar transitlink.jar"]

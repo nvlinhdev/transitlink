@@ -27,7 +27,7 @@ services:
       - app
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -49,7 +49,7 @@ services:
       - database
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d ${KEYCLOAK_DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U $KEYCLOAK_DB_USER -d $KEYCLOAK_DB_NAME"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -102,7 +102,7 @@ services:
       - database
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${TRANSITLINK_DB_USER} -d ${TRANSITLINK_DB_NAME}" ]
+      test: [ "CMD-SHELL", "pg_isready -U $TRANSITLINK_DB_USER -d $TRANSITLINK_DB_NAME" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -115,6 +115,9 @@ services:
     image: linhnvdev/transitlink:${TRANSITLINK_VERSION}
     container_name: transitlink
     environment:
+      TRANSITLINK_PORT: ${TRANSITLINK_PORT}
+      TRANSITLINK_SCHEMA: ${TRANSITLINK_SCHEMA}
+      TRANSITLINK_DOMAIN: ${TRANSITLINK_DOMAIN}
       TRANSITLINK_DB_HOST: transitlink-db
       TRANSITLINK_DB_PORT: 5432
       TRANSITLINK_DB_NAME: ${TRANSITLINK_DB_NAME}
@@ -123,11 +126,19 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      ISSUER_URI: http://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM}
-      JWK_SET_URI: http://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
-      TRANSITLINK_DOMAIN: ${TRANSITLINK_DOMAIN}
+      KEYCLOAK_SCHEMA: ${KEYCLOAK_SCHEMA}
+      KEYCLOAK_DOMAIN: ${KEYCLOAK_DOMAIN}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      TRANSITLINK_MAX_FILE_SIZE: ${TRANSITLINK_MAX_FILE_SIZE}
+      TRANSITLINK_MAX_REQUEST_SIZE: ${TRANSITLINK_MAX_REQUEST_SIZE}
+      TRANSITLINK_STORAGE_PROVIDER: ${TRANSITLINK_STORAGE_PROVIDER}
+      TRANSITLINK_WORKING_DIR: ${TRANSITLINK_WORKING_DIR}
+      TRANSITLINK_MAX_LOG_FILE_SIZE: ${TRANSITLINK_MAX_LOG_FILE_SIZE}
+      TRANSITLINK_MAX_LOG_HISTORY: ${TRANSITLINK_MAX_LOG_HISTORY}
     volumes:
-      - ./transitlink/storage-data:/app/storage
+      - ./transitlink/data:/transitlink/data
+      - ./transitlink/logs:/transitlink/logs
+      - ./transitlink/config:/transitlink/config
     depends_on:
       transitlink-db:
         condition: service_healthy
@@ -141,7 +152,7 @@ services:
       - gateway
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8888/actuator/health || exit 1" ]
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:$TRANSITLINK_PORT/actuator/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -181,11 +192,8 @@ services:
       - prod
 
   certbot:
-    image: certbot/dns-cloudflare
+    image: certbot/dns-cloudflare:v4.1.1
     container_name: certbot
-    environment:
-      - CLOUDFLARE_EMAIL=${CLOUDFLARE_EMAIL}
-      - CLOUDFLARE_API_KEY=${CLOUDFLARE_API_KEY}
     networks:
       - gateway
     volumes:

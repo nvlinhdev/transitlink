@@ -36,8 +36,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex, HttpServletRequest request) {
         // Business exceptions are expected, so use WARN level
-        log.warn("Business exception occurred - Code: {}, Path: {}, Message: {}",
-                ex.getErrorCode().getCode(), request.getRequestURI(), ex.getMessage());
+        log.warn("Business exception occurred - Code: {}, Path: {}, Exception: {}",
+                ex.getErrorCode().getCode(), request.getRequestURI(), ex);
 
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getMessage(),

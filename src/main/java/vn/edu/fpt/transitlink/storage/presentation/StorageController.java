@@ -202,7 +202,7 @@ public class StorageController {
                     description = "File not found",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                    examples = @ExampleObject(
+                            examples = @ExampleObject(
                                     name = "FileNotFound",
                                     summary = "File not found",
                                     value = """
@@ -308,13 +308,8 @@ public class StorageController {
             @Parameter(description = "File ID", required = true)
             @PathVariable UUID id,
             Authentication authentication) {
-
         UUID userId = UUID.fromString(authentication.getName());
-        try {
-            storageService.deleteFile(id, userId);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            throw new BusinessException(StorageErrorCode.FILE_DELETE_FAILED);
-        }
+        storageService.deleteFile(id, userId);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -90,7 +90,7 @@ public class StorageService {
         FileInfo fileInfo = fileInfoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(StorageErrorCode.FILE_NOT_FOUND, "File not found: " + id));
 
-        if (fileInfo.getUploadedBy() != deletedBy) {
+        if (!fileInfo.getUploadedBy().equals(deletedBy)) {
             throw new BusinessException(StorageErrorCode.NOT_PERMITTED);
         }
 
@@ -103,6 +103,7 @@ public class StorageService {
 
             logger.info("File deleted: {} by {}", fileInfo.getOriginalName(), deletedBy);
         } catch (Exception e) {
+            logger.error("Failed to delete file {} by {}: {}", fileInfo.getOriginalName(), deletedBy, e);
             throw new BusinessException(StorageErrorCode.FILE_DELETE_FAILED,
                     "Failed to delete file: " + fileInfo.getOriginalName(), e);
         }
