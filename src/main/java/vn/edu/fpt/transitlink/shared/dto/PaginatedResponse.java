@@ -1,27 +1,55 @@
 package vn.edu.fpt.transitlink.shared.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import vn.edu.fpt.transitlink.shared.util.TimeUtil;
 
 import java.util.List;
 
+@Schema(name = "PaginatedResponse", description = "Paginated response with metadata")
 public record PaginatedResponse<T>(
+
+        @Schema(description = "Indicates if request was successful")
         boolean success,
+
+        @Schema(description = "Message describing the result")
         String message,
+
+        @Schema(description = "List of items returned for this page")
         List<T> data,
+
+        @Schema(description = "Timestamp when the response was generated")
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss 'UTC'")
         String timestamp,
+
+        @Schema(description = "HTTP status code")
         int statusCode,
-        // Pagination info
+
+        // Pagination metadata
+        @Schema(description = "Current page number (0-based)")
         int page,
+
+        @Schema(description = "Size of each page")
         int size,
+
+        @Schema(description = "Total number of elements across all pages")
         long totalElements,
+
+        @Schema(description = "Total number of pages")
         int totalPages,
+
+        @Schema(description = "Whether there is a next page")
         boolean hasNext,
+
+        @Schema(description = "Whether there is a previous page")
         boolean hasPrevious,
+
+        @Schema(description = "Whether this is the first page")
         boolean isFirst,
+
+        @Schema(description = "Whether this is the last page")
         boolean isLast
 ) {
     // Constructor với tính toán tự động - handle edge cases

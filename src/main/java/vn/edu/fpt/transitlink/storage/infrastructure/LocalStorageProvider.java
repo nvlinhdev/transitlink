@@ -2,15 +2,17 @@ package vn.edu.fpt.transitlink.storage.infrastructure;
 
 import lombok.extern.slf4j.Slf4j;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
-import vn.edu.fpt.transitlink.shared.exception.ErrorCode;
+import vn.edu.fpt.transitlink.storage.config.StorageProperties;
+import vn.edu.fpt.transitlink.storage.domain.exception.StorageErrorCode;
 import vn.edu.fpt.transitlink.storage.domain.model.FileInfo;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 @Component
@@ -18,68 +20,84 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 public class LocalStorageProvider implements StorageProvider {
 
-    private final Path rootPath;
-    private final String baseUrl;
+    private final StorageProperties props;
 
-    public LocalStorageProvider(@Value("${storage.root-path:./storage}") String rootPath,
-                                @Value("${storage.base-url:http://localhost:8888/api/storage/files}") String baseUrl) {
-        this.rootPath = Paths.get(rootPath);
-        this.baseUrl = baseUrl;
-        log.info("Initializing LocalStorageProvider with path: {}", this.rootPath.toAbsolutePath());
-
+    public LocalStorageProvider(StorageProperties props) {
+        this.props = props;
+        log.info("Initializing LocalStorageProvider with root: {}", props.getRootPath().toAbsolutePath());
         initStorage();
     }
 
     private void initStorage() {
         try {
-            Files.createDirectories(rootPath);
-            log.info("Storage directory initialized at: {}", rootPath.toAbsolutePath());
+            Files.createDirectories(props.getRootPath());
+            log.info("Storage root initialized at: {}", props.getRootPath().toAbsolutePath());
         } catch (IOException e) {
-            log.error("Failed to create storage directory at {}: {}", rootPath.toAbsolutePath(), e.getMessage());
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Failed to create storage directory", e);
+            log.error("Cannot create storage root at {}: {}", props.getRootPath(), e.getMessage());
+            throw new BusinessException(StorageErrorCode.STORAGE_INITIALIZATION_FAILED, "Could not initialize storage directory", e);
         }
     }
 
     @Override
-    public void store(InputStream inputStream, FileInfo fileInfo) {
+    public FileInfo store(InputStream inputStream, FileInfo fileInfo) {
+        Path filePath = getAbsolutePath(fileInfo);
         try {
-            Path filePath = getFilePath(fileInfo);
             Files.createDirectories(filePath.getParent());
             Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+            log.info("Stored file at: {}", filePath);
+            String publicUrl = getPublicUrl(fileInfo);
+            return fileInfo.withUrl(publicUrl);
         } catch (IOException e) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Failed to store file", e);
+            log.error("Failed to store file at {}: {}", filePath, e.getMessage());
+            throw new BusinessException(StorageErrorCode.FILE_STORE_FAILED, "Failed to store file", e);
         }
     }
 
     @Override
     public InputStream retrieve(FileInfo fileInfo) {
+        Path filePath = getAbsolutePath(fileInfo);
         try {
-            Path filePath = getFilePath(fileInfo);
-            return Files.newInputStream(filePath);
+            if (!Files.exists(filePath)) {
+                log.warn("File not found: {}", filePath);
+                throw new BusinessException(StorageErrorCode.FILE_NOT_FOUND, "File not found: " + filePath);
+            }
+            return Files.newInputStream(filePath, StandardOpenOption.READ);
         } catch (IOException e) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Failed to retrieve file", e);
+            throw new BusinessException(StorageErrorCode.FILE_RETRIEVE_FAILED, "Failed to retrieve file: " + filePath, e);
         }
     }
 
     @Override
     public void delete(FileInfo fileInfo) {
+        Path filePath = getAbsolutePath(fileInfo);
         try {
-            Path filePath = getFilePath(fileInfo);
             Files.deleteIfExists(filePath);
+            log.info("Deleted file: {}", filePath);
         } catch (IOException e) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Failed to delete file", e);
+            log.error("Failed to delete file {}: {}", filePath, e.getMessage());
+            throw new BusinessException(StorageErrorCode.FILE_DELETE_FAILED, "Failed to delete file: " + filePath, e);
         }
     }
 
     @Override
     public String getPublicUrl(FileInfo fileInfo) {
-        return baseUrl + "/" + fileInfo.getId();
+        String relativePath = getRelativePath(fileInfo).toString().replace("\\", "/");
+        return props.getBaseUrl() + "/" + relativePath;
     }
 
-    private Path getFilePath(FileInfo fileInfo) {
-        String dateFolder = fileInfo.getUploadedAt().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-        return rootPath.resolve(dateFolder).resolve(fileInfo.getFileType().name().toLowerCase())
+    private Path getRelativePath(FileInfo fileInfo) {
+        LocalDate uploadDate = fileInfo.getUploadedAt()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        String dateFolder = DateTimeFormatter.ofPattern("yyyy/MM/dd").format(uploadDate);
+
+        return Paths.get(dateFolder)
+                .resolve(fileInfo.getFileType().name().toLowerCase())
                 .resolve(fileInfo.getStoredName());
     }
-}
 
+    private Path getAbsolutePath(FileInfo fileInfo) {
+        return props.getRootPath().resolve(getRelativePath(fileInfo));
+    }
+}

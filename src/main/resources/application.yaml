@@ -46,8 +46,8 @@ management:
 
 storage:
   provider: local
-  root-path: ./storage
-  base-url: http://${TRANSITLINK_DOMAIN}/api/storage/files
+  root-path: C:/transitlink/uploads
+  base-url: http://${TRANSITLINK_DOMAIN}/files
 
 # SpringDoc configuration for API documentation
 springdoc:

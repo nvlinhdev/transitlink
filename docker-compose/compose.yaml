@@ -127,7 +127,7 @@ services:
       JWK_SET_URI: http://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
       TRANSITLINK_DOMAIN: ${TRANSITLINK_DOMAIN}
     volumes:
-      - ./storage-data:/app/storage
+      - ./transitlink/storage-data:/app/storage
     depends_on:
       transitlink-db:
         condition: service_healthy

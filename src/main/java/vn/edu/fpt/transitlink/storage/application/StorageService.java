@@ -3,7 +3,7 @@ package vn.edu.fpt.transitlink.storage.application;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
-import vn.edu.fpt.transitlink.shared.exception.ErrorCode;
+import vn.edu.fpt.transitlink.storage.domain.exception.StorageErrorCode;
 import vn.edu.fpt.transitlink.storage.domain.model.FileInfo;
 import vn.edu.fpt.transitlink.storage.domain.model.FileType;
 import vn.edu.fpt.transitlink.storage.domain.repository.FileInfoRepository;
@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,7 +22,6 @@ import java.util.UUID;
 public class StorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(StorageService.class);
-
     private final FileInfoRepository fileInfoRepository;
     private final StorageProvider storageProvider;
     private final FileProcessor fileProcessor;
@@ -36,7 +34,7 @@ public class StorageService {
         this.fileProcessor = fileProcessor;
     }
 
-    public FileInfo uploadFile(MultipartFile multipartFile, String uploadedBy) {
+    public FileInfo uploadFile(MultipartFile multipartFile, UUID uploadedBy) {
         validateFile(multipartFile);
 
         try {
@@ -50,12 +48,12 @@ public class StorageService {
 
             // Process file if needed (resize, compress)
             InputStream processedStream = multipartFile.getInputStream();
-            if (fileInfo.isImage()) {
+            if (fileInfo.getFileType() == FileType.IMAGE) {
                 processedStream = fileProcessor.processImage(processedStream, fileInfo.getContentType());
             }
 
             // Store file physically
-            storageProvider.store(processedStream, fileInfo);
+            fileInfo = storageProvider.store(processedStream, fileInfo);
 
             // Save metadata to database
             FileInfo savedFileInfo = fileInfoRepository.save(fileInfo);
@@ -65,72 +63,64 @@ public class StorageService {
 
         } catch (Exception e) {
             logger.error("Upload failed: {}", multipartFile.getOriginalFilename(), e);
-            throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED,
+            throw new BusinessException(StorageErrorCode.FILE_UPLOAD_FAILED,
                     "Failed to upload file: " + multipartFile.getOriginalFilename(), e);
         }
     }
 
     @Transactional(readOnly = true)
     public Optional<FileInfo> findById(UUID id) {
-        return fileInfoRepository.findByIdAndDeletedFalse(id);
+        return fileInfoRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
     public InputStream downloadFile(UUID id) {
-        FileInfo fileInfo = fileInfoRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "File not found: " + id));
+        FileInfo fileInfo = fileInfoRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(StorageErrorCode.FILE_NOT_FOUND, "File not found: " + id));
 
         try {
             return storageProvider.retrieve(fileInfo);
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.FILE_DOWNLOAD_FAILED,
+            throw new BusinessException(StorageErrorCode.FILE_DOWNLOAD_FAILED,
                     "Failed to download file: " + fileInfo.getOriginalName(), e);
         }
     }
 
-    public void deleteFile(UUID id, String deletedBy) {
-        FileInfo fileInfo = fileInfoRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "File not found: " + id));
+    public void deleteFile(UUID id, UUID deletedBy) {
+        FileInfo fileInfo = fileInfoRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(StorageErrorCode.FILE_NOT_FOUND, "File not found: " + id));
+
+        if (fileInfo.getUploadedBy() != deletedBy) {
+            throw new BusinessException(StorageErrorCode.NOT_PERMITTED);
+        }
 
         try {
-            // Soft delete in database
-            fileInfo.markAsDeleted();
-            fileInfoRepository.save(fileInfo);
+            // delete file metadata
+            fileInfoRepository.delete(fileInfo);
 
             // Delete physical file
             storageProvider.delete(fileInfo);
 
             logger.info("File deleted: {} by {}", fileInfo.getOriginalName(), deletedBy);
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.FILE_DELETE_FAILED,
+            throw new BusinessException(StorageErrorCode.FILE_DELETE_FAILED,
                     "Failed to delete file: " + fileInfo.getOriginalName(), e);
         }
     }
-
-    @Transactional(readOnly = true)
-    public List<FileInfo> getUserFiles(String userId) {
-        return fileInfoRepository.findByUploadedByAndDeletedFalse(userId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<FileInfo> getFilesByType(FileType type) {
-        return fileInfoRepository.findByFileTypeAndDeletedFalse(type);
-    }
-
     private void validateFile(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "File must not be empty");
+            throw new BusinessException(StorageErrorCode.FILE_EMPTY);
         }
 
         FileType type = FileType.fromContentType(file.getContentType());
         if (!type.isAllowed()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST,
+            throw new BusinessException(StorageErrorCode.FILE_NOT_SUPPORTED,
                     String.format("File type %s is not allowed", file.getContentType()));
         }
 
         long maxSize = getMaxSizeForType(type);
         if (file.getSize() > maxSize) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST,
+            throw new BusinessException(StorageErrorCode.EXCEEDED_MAX_FILE_SIZE,
                     String.format("File size %d exceeds limit %d", file.getSize(), maxSize));
         }
     }

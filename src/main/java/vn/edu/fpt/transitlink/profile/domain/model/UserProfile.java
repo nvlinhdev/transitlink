@@ -16,7 +16,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Data
 public class UserProfile {
-
     @Id
     @GeneratedValue
     private UUID id;

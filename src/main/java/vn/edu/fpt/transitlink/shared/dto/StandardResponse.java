@@ -1,15 +1,27 @@
 package vn.edu.fpt.transitlink.shared.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
 import vn.edu.fpt.transitlink.shared.util.TimeUtil;
 
+@Schema(name = "StandardResponse", description = "Generic standard response wrapper")
 public record StandardResponse<T>(
+
+        @Schema(description = "Indicates if request was successful")
         boolean success,
+
+        @Schema(description = "Message describing the result")
         String message,
+
+        @Schema(description = "Returned data, can be any type")
         T data,
+
+        @Schema(description = "Timestamp when the response was generated")
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss 'UTC'")
         String timestamp,
+
+        @Schema(description = "HTTP status code")
         int statusCode
 ) {
     // Constructor với timestamp tự động
@@ -32,13 +44,5 @@ public record StandardResponse<T>(
 
     public static <T> StandardResponse<T> created(String message, T data) {
         return new StandardResponse<>(true, message, data, HttpStatus.CREATED.value());
-    }
-
-    public static <T> StandardResponse<T> noContent() {
-        return new StandardResponse<>(true, "No content", null, HttpStatus.NO_CONTENT.value());
-    }
-
-    public static <T> StandardResponse<T> noContent(String message) {
-        return new StandardResponse<>(true, message, null, HttpStatus.NO_CONTENT.value());
     }
 }
