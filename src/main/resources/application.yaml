@@ -49,13 +49,37 @@ logging:
     name: ${TRANSITLINK_WORKING_DIR:"."}/logs/transitlink.log
   logback:
     rollingpolicy:
-      max-file-size: ${TRANSITLINK_MAX_LOG_FILE_SIZE:"10MB"}
+      max-file-size: ${TRANSITLINK_MAX_LOG_FILE_SIZE:10MB}
       max-history: ${TRANSITLINK_MAX_LOG_HISTORY:7}
 
-storage:
-  provider: ${TRANSITLINK_STORAGE_PROVIDER:"local"}
-  root-path: ${TRANSITLINK_WORKING_DIR:"."}/data
-  base-url: ${TRANSITLINK_SCHEMA}://${TRANSITLINK_DOMAIN}/files
+app:
+  storage:
+    provider: ${TRANSITLINK_STORAGE_PROVIDER:"local"}
+    root-path: ${TRANSITLINK_WORKING_DIR:"."}/data
+    base-url: ${TRANSITLINK_SCHEMA}://${TRANSITLINK_DOMAIN}/files
+  security:
+    permit-all:
+      - /swagger-ui/**
+      - /v3/api-docs/**
+      - /swagger-ui.html
+      - /files/**
+      - /actuator/health
+      - /actuator/info
+    cors:
+      allowed-origins:
+        - "http://localhost:4200"
+        - "http://localhost:8888"
+        - "http://api.transitlink.fpt.edu.vn"
+        - "https://api.transitlink.fpt.edu.vn"
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - "*"
+      allow-credentials: true
 
 # SpringDoc configuration for API documentation
 springdoc:

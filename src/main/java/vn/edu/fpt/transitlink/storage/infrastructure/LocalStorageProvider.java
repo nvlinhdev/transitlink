@@ -1,8 +1,8 @@
 package vn.edu.fpt.transitlink.storage.infrastructure;
 
 import lombok.extern.slf4j.Slf4j;
+import vn.edu.fpt.transitlink.shared.config.AppProperties;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
-import vn.edu.fpt.transitlink.storage.config.StorageProperties;
 import vn.edu.fpt.transitlink.storage.domain.exception.StorageErrorCode;
 import vn.edu.fpt.transitlink.storage.domain.model.FileInfo;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,20 +20,20 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 public class LocalStorageProvider implements StorageProvider {
 
-    private final StorageProperties props;
+    private final AppProperties props;
 
-    public LocalStorageProvider(StorageProperties props) {
+    public LocalStorageProvider(AppProperties props) {
         this.props = props;
-        log.info("Initializing LocalStorageProvider with root: {}", props.getRootPath().toAbsolutePath());
+        log.info("Initializing LocalStorageProvider with root: {}", props.storage().rootPath().toAbsolutePath());
         initStorage();
     }
 
     private void initStorage() {
         try {
-            Files.createDirectories(props.getRootPath());
-            log.info("Storage root initialized at: {}", props.getRootPath().toAbsolutePath());
+            Files.createDirectories(props.storage().rootPath());
+            log.info("Storage root initialized at: {}", props.storage().rootPath().toAbsolutePath());
         } catch (IOException e) {
-            log.error("Cannot create storage root at {}: {}", props.getRootPath(), e.getMessage());
+            log.error("Cannot create storage root at {}: {}", props.storage().rootPath(), e.getMessage());
             throw new BusinessException(StorageErrorCode.STORAGE_INITIALIZATION_FAILED, "Could not initialize storage directory", e);
         }
     }
@@ -82,7 +82,7 @@ public class LocalStorageProvider implements StorageProvider {
     @Override
     public String getPublicUrl(FileInfo fileInfo) {
         String relativePath = getRelativePath(fileInfo).toString().replace("\\", "/");
-        return props.getBaseUrl() + "/" + relativePath;
+        return props.storage().baseUrl() + "/" + relativePath;
     }
 
     private Path getRelativePath(FileInfo fileInfo) {
@@ -98,6 +98,6 @@ public class LocalStorageProvider implements StorageProvider {
     }
 
     private Path getAbsolutePath(FileInfo fileInfo) {
-        return props.getRootPath().resolve(getRelativePath(fileInfo));
+        return props.storage().rootPath().resolve(getRelativePath(fileInfo));
     }
 }

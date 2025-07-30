@@ -13,7 +13,6 @@ volumes:
   redis-data:
   keycloak-data:
   transitlink-data:
-  letsencrypt_certs:
 
 services:
   redis:
@@ -31,10 +30,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    profiles:
-      - dev
-      - stag
-      - prod
 
   keycloak-db:
     image: bitnami/postgresql:17.5.0-debian-12-r20
@@ -53,10 +48,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    profiles:
-      - dev
-      - stag
-      - prod
 
   keycloak:
     image: bitnami/keycloak:26.3.1-debian-12-r2
@@ -84,10 +75,6 @@ services:
       timeout: 10s
       retries: 10
       start_period: 60s
-    profiles:
-      - dev
-      - stag
-      - prod
 
   transitlink-db:
     image: bitnami/postgresql:17.5.0-debian-12-r20
@@ -106,10 +93,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    profiles:
-      - dev
-      - stag
-      - prod
 
   transitlink:
     image: linhnvdev/transitlink:${TRANSITLINK_VERSION}
@@ -156,10 +139,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    profiles:
-      - dev
-      - stag
-      - prod
 
   nginx:
     image: bitnami/nginx:1.29.0-debian-12-r4
@@ -168,8 +147,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/conf/server_blocks:/opt/bitnami/nginx/conf/server_blocks/
-      - letsencrypt_certs:/certs
+      - ./nginx/conf/server_blocks:/opt/bitnami/nginx/conf/server_blocks/:ro
+      - ./letsencrypt:/certs
     depends_on:
       keycloak:
         condition: service_healthy
@@ -186,20 +165,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    profiles:
-      - dev
-      - stag
-      - prod
-
-  certbot:
-    image: certbot/dns-cloudflare:v4.1.1
-    container_name: certbot
-    networks:
-      - gateway
-    volumes:
-      - letsencrypt_certs:/etc/letsencrypt
-    depends_on:
-      nginx:
-        condition: service_healthy
-    profiles:
-      - prod

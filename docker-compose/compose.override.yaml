@@ -11,4 +11,4 @@ services:
       dockerfile: Dockerfile
     image: linhnvdev/transitlink:dev
     volumes:
-      - ../build/libs/transitlink-1.0.0-SNAPSHOT.jar:/app/app.jar
+      - ../build/libs/transitlink-1.0.0-SNAPSHOT.jar:/transitlink/transitlink.jar
