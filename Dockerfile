@@ -1,7 +1,7 @@
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /transitlink
 
-RUN addgroup -S transitlinkgroup && adduser -S transitlink -G transitlinkgroup \
+RUN addgroup -g 1000 transitlinkgroup && adduser -u 1000 -S transitlink -G transitlinkgroup \
     && mkdir -p /transitlink/logs /transitlink/data /transitlink/config \
     && chown -R transitlink:transitlinkgroup /transitlink
 
