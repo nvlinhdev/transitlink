@@ -4,10 +4,14 @@ gradle/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+
+# docker compose
 !docker-compose/.env.example
 docker-compose/.env.*
 docker-compose/transitlink/data
 docker-compose/transitlink/logs
+docker-compose/nginx/conf/server_blocks/*
+docker-compose/letsencrypt/*
 
 ### STS ###
 .apt_generated

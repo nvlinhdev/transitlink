@@ -49,13 +49,35 @@ logging:
     name: ${TRANSITLINK_WORKING_DIR:"."}/logs/transitlink.log
   logback:
     rollingpolicy:
-      max-file-size: ${TRANSITLINK_MAX_LOG_FILE_SIZE:"10MB"}
+      max-file-size: ${TRANSITLINK_MAX_LOG_FILE_SIZE:10MB}
       max-history: ${TRANSITLINK_MAX_LOG_HISTORY:7}
 
-storage:
-  provider: ${TRANSITLINK_STORAGE_PROVIDER:"local"}
-  root-path: ${TRANSITLINK_WORKING_DIR:"."}/data
-  base-url: ${TRANSITLINK_SCHEMA}://${TRANSITLINK_DOMAIN}/files
+app:
+  storage:
+    provider: ${TRANSITLINK_STORAGE_PROVIDER:"local"}
+    root-path: ${TRANSITLINK_WORKING_DIR:"."}/data
+    base-url: ${TRANSITLINK_SCHEMA}://${TRANSITLINK_DOMAIN}/files
+  security:
+    permit-all:
+      - /swagger-ui/**
+      - /v3/api-docs/**
+      - /swagger-ui.html
+      - /files/**
+      - /actuator/health
+      - /actuator/info
+    cors:
+      allowed-origins:
+        - "http://localhost:4200"
+        - "https://api.transitlink.dpdns.org"
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - "*"
+      allow-credentials: true
 
 # SpringDoc configuration for API documentation
 springdoc:
@@ -76,10 +98,10 @@ springdoc:
     description: API documentation for the TransitLink application
 
   servers:
-    - url: http://localhost:8888
-      description: Local development server
     - url: http://api.transitlink.fpt.edu.vn
-      description: Containerized depvloyment server
+      description: api server on docker-compose
+    - url: http://localhost:8888
+      description: api server on localhost
 
   oauth:
     authorization-url: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/auth
