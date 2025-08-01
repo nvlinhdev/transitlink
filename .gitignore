@@ -12,6 +12,7 @@ docker-compose/transitlink/data
 docker-compose/transitlink/logs
 docker-compose/nginx/conf/server_blocks/*
 docker-compose/letsencrypt/*
+tmp/
 
 ### STS ###
 .apt_generated
