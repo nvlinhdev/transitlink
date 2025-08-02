@@ -1,24 +1,20 @@
 package vn.edu.fpt.transitlink.shared.exception;
 
-public class BusinessException extends RuntimeException {
-    private final ErrorCodeDefinition errorCode;
-
+public class BusinessException extends BaseException {
     public BusinessException(ErrorCodeDefinition errorCode) {
-        super(errorCode.getDefaultMessage());
-        this.errorCode = errorCode;
+        super(errorCode);
+    }
+
+    public BusinessException(ErrorCodeDefinition errorCode, Throwable cause) {
+        super(errorCode, cause);
     }
 
     public BusinessException(ErrorCodeDefinition errorCode, String message) {
-        super(message);
-        this.errorCode = errorCode;
+        super(errorCode, message);
     }
 
     public BusinessException(ErrorCodeDefinition errorCode, String message, Throwable cause) {
-        super(message, cause);
-        this.errorCode = errorCode;
-    }
-
-    public ErrorCodeDefinition getErrorCode() {
-        return errorCode;
+        super(errorCode, message, cause);
     }
 }
+

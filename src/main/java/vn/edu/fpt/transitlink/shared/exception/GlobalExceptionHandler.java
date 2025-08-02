@@ -35,9 +35,10 @@ public class GlobalExceptionHandler {
     // Handle business exceptions
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex, HttpServletRequest request) {
-        // Business exceptions are expected, so use WARN level
-        log.warn("Business exception occurred - Code: {}, Path: {}, Exception: {}",
-                ex.getErrorCode().getCode(), request.getRequestURI(), ex);
+        log.info("Business exception - Code: {}, Path: {}, Message: {}",
+                ex.getErrorCode().getCode(),
+                request.getRequestURI(),
+                ex.getMessage());
 
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getMessage(),
@@ -45,8 +46,44 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 ex.getErrorCode().getHttpStatus().value()
         );
-        return new ResponseEntity<>(errorResponse, ex.getErrorCode().getHttpStatus());
+
+        return ResponseEntity.status(ex.getErrorCode().getHttpStatus()).body(errorResponse);
     }
+
+    @ExceptionHandler(SystemException.class)
+    public ResponseEntity<ErrorResponse> handleSystemException(SystemException ex, HttpServletRequest request) {
+        log.error("System exception - Path: {}, Code: {}, Message: {}",
+                request.getRequestURI(),
+                ex.getErrorCode().getCode(),
+                ex.getMessage(), ex);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                ex.getErrorCode().getCode(),
+                request.getRequestURI(),
+                ex.getErrorCode().getHttpStatus().value()
+        );
+
+        return ResponseEntity.status(ex.getErrorCode().getHttpStatus()).body(errorResponse);
+    }
+
+    @ExceptionHandler(ThirdPartyException.class)
+    public ResponseEntity<ErrorResponse> handleThirdPartyException(ThirdPartyException ex, HttpServletRequest request) {
+        log.warn("Third-party exception - Path: {}, Code: {}, Message: {}",
+                request.getRequestURI(),
+                ex.getErrorCode().getCode(),
+                ex.getMessage(), ex);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                ex.getErrorCode().getCode(),
+                request.getRequestURI(),
+                ex.getErrorCode().getHttpStatus().value()
+        );
+
+        return ResponseEntity.status(ex.getErrorCode().getHttpStatus()).body(errorResponse);
+    }
+
 
     // Handle Unexpected exceptions
     @ExceptionHandler(Exception.class)
