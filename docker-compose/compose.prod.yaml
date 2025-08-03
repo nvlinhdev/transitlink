@@ -1,0 +1,10 @@
+services:
+  keycloak:
+    environment:
+      KEYCLOAK_PROXY_HEADERS: xforwarded
+
+  transitlink:
+    image: linhnvdev/transitlink:latest
+
+  transitlink-frontend:
+    image: linhnvdev/transitlink-frontend:latest

@@ -2,19 +2,35 @@ server:
   port: ${TRANSITLINK_PORT:8888}
 
 spring:
+  jackson:
+    time-zone: UTC
+
   datasource:
     url: jdbc:postgresql://${TRANSITLINK_DB_HOST}:${TRANSITLINK_DB_PORT}/${TRANSITLINK_DB_NAME}
     username: ${TRANSITLINK_DB_USER}
     password: ${TRANSITLINK_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: HikariPool-TransitLink
+      connection-init-sql: "SET time zone 'UTC';"
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 60000
+      connection-timeout: 3000
+      max-lifetime: 1800000
 
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+    open-in-view: false
     properties:
       hibernate.format_sql: true
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.jdbc.time_zone: UTC
+      hibernate.jdbc.batch_size: 50
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
 
   data:
     redis:
@@ -68,7 +84,9 @@ app:
     cors:
       allowed-origins:
         - "http://localhost:4200"
-        - "https://api.transitlink.dpdns.org"
+        - "http://localhost:8888"
+        - "http://api.transitlink.fpt.edu.vn"
+        - "https://api.transitlink.fpt.edu.vn"
       allowed-methods:
         - GET
         - POST
@@ -98,10 +116,10 @@ springdoc:
     description: API documentation for the TransitLink application
 
   servers:
-    - url: http://api.transitlink.fpt.edu.vn
-      description: api server on docker-compose
     - url: http://localhost:8888
-      description: api server on localhost
+      description: Local development server
+    - url: http://api.transitlink.fpt.edu.vn
+      description: Containerized depvloyment server
 
   oauth:
     authorization-url: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/auth

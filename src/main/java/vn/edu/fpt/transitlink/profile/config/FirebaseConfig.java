@@ -15,14 +15,19 @@ public class FirebaseConfig {
     @PostConstruct
     public void init() throws IOException {
         if (FirebaseApp.getApps().isEmpty()) {
-            FileInputStream serviceAccount =
-                    new FileInputStream("src/main/resources/firebase-service-account.json");
+            String configPath = System.getenv("FIREBASE_CONFIG_PATH");
+            if (configPath == null || configPath.isEmpty()) {
+                throw new IllegalStateException("Missing FIREBASE_CONFIG_PATH environment variable");
+            }
 
-            FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .build();
+            try (FileInputStream serviceAccount = new FileInputStream(configPath)) {
+                FirebaseOptions options = FirebaseOptions.builder()
+                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                        .build();
 
-            FirebaseApp.initializeApp(options);
+                FirebaseApp.initializeApp(options);
+            }
         }
     }
 }
+

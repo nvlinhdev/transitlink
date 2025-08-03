@@ -11,6 +11,7 @@ src/main/resources/*.json
 docker-compose/.env.*
 docker-compose/transitlink/data
 docker-compose/transitlink/logs
+docker-compose/transitlink/secrets
 docker-compose/nginx/conf/server_blocks/*
 docker-compose/letsencrypt/*
 tmp/

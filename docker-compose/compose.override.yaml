@@ -6,9 +6,9 @@ services:
     ports:
       - 5432:5432
   transitlink:
-    build:
-      context: ../
-      dockerfile: Dockerfile
     image: linhnvdev/transitlink:dev
     volumes:
       - ../build/libs/transitlink-1.0.0-SNAPSHOT.jar:/transitlink/transitlink.jar
+
+  transitlink-frontend:
+    image: linhnvdev/transitlink-spa:dev
