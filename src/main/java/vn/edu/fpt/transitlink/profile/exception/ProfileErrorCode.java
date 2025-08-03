@@ -6,10 +6,12 @@ import vn.edu.fpt.transitlink.shared.exception.ErrorCodeDefinition;
 
 @Getter
 public enum ProfileErrorCode implements ErrorCodeDefinition {
-    PROFILE_NOT_FOUND("PROFILE_NOT_FOUND", "Profile not found", HttpStatus.NOT_FOUND),
     PROFILE_ALREADY_EXISTS("PROFILE_ALREADY_EXISTS", "Profile already exists", HttpStatus.CONFLICT),
-    PROFILE_UPDATE_FAILED("PROFILE_UPDATE_FAILED", "Profile update failed", HttpStatus.INTERNAL_SERVER_ERROR),
-    PROFILE_DELETE_FAILED("PROFILE_DELETE_FAILED", "Profile delete failed", HttpStatus.INTERNAL_SERVER_ERROR);
+    PHONE_NUMBER_NOT_IN_TOKEN("PHONE_NUMBER_NOT_IN_TOKEN", "Phone number not found in Firebase token", HttpStatus.BAD_REQUEST),
+    PHONE_VERIFICATION_TOKEN_EXPIRED("PHONE_VERIFICATION_TOKEN_EXPIRED", "ID token expired for verification purposes", HttpStatus.UNAUTHORIZED),
+    PHONE_VERIFICATION_ALREADY_USED("PHONE_VERIFICATION_ALREADY_USED", "This phone verification token has already been used", HttpStatus.BAD_REQUEST),
+    PHONE_VERIFICATION_FAILED("PHONE_VERIFICATION_FAILED", "Firebase token verification failed", HttpStatus.UNAUTHORIZED),
+    PHONE_VERIFICATION_TOKEN_INVALID("PHONE_VERIFICATION_TOKEN_INVALID", "Invalid Firebase phone verification token", HttpStatus.BAD_REQUEST);;
 
     private final String code;
     private final String defaultMessage;

@@ -1,13 +1,20 @@
 package vn.edu.fpt.transitlink.profile.repository;
 
-import org.springframework.stereotype.Repository;
+import jakarta.transaction.Transactional;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import vn.edu.fpt.transitlink.profile.entity.UserProfile;
-import org.springframework.data.jpa.repository.JpaRepository;
+import vn.edu.fpt.transitlink.shared.base.SoftDeletableRepository;
 
-import java.util.Optional;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
-public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> {
-    Optional<UserProfile> findByAccountId(UUID accountId);
+public interface UserProfileRepository extends SoftDeletableRepository<UserProfile, UUID> {
     boolean existsByAccountId(UUID accountId);
+
+    @Override
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM UserProfile u WHERE u.deleted = true AND u.deletedAt < :threshold")
+    int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
 }

@@ -6,6 +6,5 @@ import vn.edu.fpt.transitlink.profile.dto.UserProfileDTO;
 import java.util.UUID;
 
 public interface ProfileService {
-    public UserProfileDTO createProfile(UUID accountId, CreateProfileRequest request);
-
+    UserProfileDTO createProfile(UUID accountId, CreateProfileRequest request);
 }
