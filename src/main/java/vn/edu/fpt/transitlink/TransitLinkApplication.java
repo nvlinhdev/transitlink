@@ -6,11 +6,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import vn.edu.fpt.transitlink.shared.config.AppProperties;
 import vn.edu.fpt.transitlink.shared.config.SpringDocProperties;
 
-@SpringBootApplication
 @EnableConfigurationProperties({
         AppProperties.class,
         SpringDocProperties.class
 })
+@SpringBootApplication
 public class TransitLinkApplication {
 
     public static void main(String[] args) {

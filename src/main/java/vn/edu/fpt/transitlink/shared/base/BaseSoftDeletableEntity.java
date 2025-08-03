@@ -2,12 +2,16 @@ package vn.edu.fpt.transitlink.shared.base;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
 @MappedSuperclass
+@Getter
+@Setter
 public abstract class BaseSoftDeletableEntity extends BaseUserAuditableEntity {
 
     @Column(name = "is_deleted", nullable = false)
