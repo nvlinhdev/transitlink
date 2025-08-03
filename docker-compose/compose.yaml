@@ -118,7 +118,7 @@ services:
       TRANSITLINK_WORKING_DIR: ${TRANSITLINK_WORKING_DIR}
       TRANSITLINK_MAX_LOG_FILE_SIZE: ${TRANSITLINK_MAX_LOG_FILE_SIZE}
       TRANSITLINK_MAX_LOG_HISTORY: ${TRANSITLINK_MAX_LOG_HISTORY}
-      FIREBASE_CONFIG_PATH: /transitlink/secrets/firebase-service-account.json
+      FIREBASE_CONFIG_PATH: /transitlink/secrets/${FIREBASE_CONFIG_FILE}
     volumes:
       - ./transitlink/data:/transitlink/data
       - ./transitlink/logs:/transitlink/logs
