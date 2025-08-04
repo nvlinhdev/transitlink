@@ -5,15 +5,6 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 src/main/resources/*.json
-
-# docker compose
-!docker-compose/.env.example
-docker-compose/.env.*
-docker-compose/transitlink/data
-docker-compose/transitlink/logs
-docker-compose/transitlink/secrets
-docker-compose/nginx/conf/server_blocks/*
-docker-compose/letsencrypt/*
 tmp/
 
 ### STS ###

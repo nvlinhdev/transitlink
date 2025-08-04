@@ -1,3 +1,9 @@
+FROM gradle:8.4.0-jdk21-alpine AS builder
+WORKDIR /app
+
+COPY . .
+RUN gradle clean build -x test
+
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /transitlink
 
@@ -7,7 +13,7 @@ RUN addgroup -g 1000 transitlinkgroup && adduser -u 1000 -S transitlink -G trans
 
 USER transitlink
 
-COPY build/libs/*.jar transitlink.jar
+COPY --from=builder /app/build/libs/*.jar transitlink.jar
 COPY --chown=transitlink:transitlinkgroup src/main/resources/application*.yaml /transitlink/config/
 
 ENV JAVA_OPTS="-Xms512m -Xmx1024m"
