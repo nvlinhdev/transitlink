@@ -1,11 +1,13 @@
 HELP.md
 .gradle
-gradle/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 src/main/resources/*.json
 tmp/
+.env
+.env.*
+!.env.example
 
 ### STS ###
 .apt_generated
