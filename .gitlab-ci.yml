@@ -84,8 +84,7 @@ backup_data:
         tar -czf $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz -C $PROJECT_DIR transitlink/
         
         # Tạo info file cho transitlink backup
-        cat > $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.info << INFO_EOF
-        Transitlink backup: $CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz
+        echo "Transitlink backup: $CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz
         Source: $PROJECT_DIR/transitlink/
         Size: \$(du -sh $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz | cut -f1)
         Total files: \$(find $PROJECT_DIR/transitlink -type f 2>/dev/null | wc -l)
@@ -94,8 +93,7 @@ backup_data:
         Branch: $CI_COMMIT_REF_NAME
         Date: \$(date)
         Contents:
-        \$(ls -la $PROJECT_DIR/transitlink/)
-        INFO_EOF
+        \$(ls -la $PROJECT_DIR/transitlink/)" > $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.info
       
         echo "=== Backup Info ==="
         echo "Commit: $CI_COMMIT_SHORT_SHA"
