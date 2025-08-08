@@ -21,7 +21,7 @@ stages:
 
 # test
 deploy_manual:
-  stage: deploy
+  stage: test
   image: alpine:latest
   only: 
     - main
