@@ -130,6 +130,7 @@ deploy:
     - ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
+    - ssh $USER@$HOST "mkdir -p $BACKUPS_DIR/api"
     - set -e
     - |
       # Tạo override file với image mới
