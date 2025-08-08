@@ -26,7 +26,7 @@ Thumbs.db
 .gitattributes
 
 # CI/CD configs (không cần đưa vào image)
-.gitlab-ci.yaml
+.gitlab-ci.yml
 
 # Other project files
 HELP.md
