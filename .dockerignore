@@ -1,0 +1,36 @@
+# IntelliJ / IDEA
+.idea/
+*.iml
+
+# Gradle caches
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+appmap.yml
+
+
+build/
+
+# Temporary files
+tmp/
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD configs (không cần đưa vào image)
+.gitlab-ci.yml
+
+# Other project files
+HELP.md
+Dockerfile
+settings.gradle.kts
+.env
+.env.*

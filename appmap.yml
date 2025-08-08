@@ -1,0 +1,5 @@
+language: "java"
+name: "transitlink"
+appmap_dir: "tmp/appmap"
+packages:
+- path: "vn.edu.fpt.transitlink"
