@@ -67,6 +67,11 @@ backup_data:
     - |
       ssh $USER@$HOST << EOF
         set -e
+        
+        mkdir -p "$BACKUPS_DIR/database/$APP_DB_NAME"
+        mkdir -p "$BACKUPS_DIR/database/$KEYCLOAK_DB_NAME"
+        mkdir -p "$BACKUPS_DIR/transitlink"
+
         cd $PROJECT_DIR/script
         ./pg_tool.sh backup -c $APP_DB_CONTAINER -n $APP_DB_NAME -u $APP_DB_USER -p $APP_DB_PASS -f $CI_COMMIT_SHORT_SHA --backup-dir $BACKUPS_DIR/database/$APP_DB_NAME
         ./pg_tool.sh backup -c $KEYCLOAK_DB_CONTAINER -n $KEYCLOAK_DB_NAME -u $KEYCLOAK_DB_USER -p $KEYCLOAK_DB_PASS -f $CI_COMMIT_SHORT_SHA --backup-dir $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME
