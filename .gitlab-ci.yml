@@ -362,15 +362,15 @@ cleanup_backups:
         set -e
         echo "=== Cleaning up old backups ==="
         echo "Cleaning $APP_DB_NAME backups..."
-        # Keep 5 newest .dump, .info, .sql.zip files
+        # Keep 5 newest .dump, .info, .sql.gz files
         ls -t $BACKUPS_DIR/database/$APP_DB_NAME/*.dump 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
         ls -t $BACKUPS_DIR/database/$APP_DB_NAME/*.info 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        ls -t $BACKUPS_DIR/database/$APP_DB_NAME/*.sql.zip 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
+        ls -t $BACKUPS_DIR/database/$APP_DB_NAME/*.sql.gz 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
         
         echo "Cleaning $KEYCLOAK_DB_NAME backups..."
         ls -t $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/*.dump 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
         ls -t $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/*.info 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        ls -t $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/*.sql.zip 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
+        ls -t $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/*.sql.gz 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
         
         echo "Cleaning transitlink data backups..."
         ls -t $BACKUPS_DIR/transitlink/*.tar.gz 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
