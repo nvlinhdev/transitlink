@@ -21,7 +21,6 @@ built with **Spring Boot 3.4.x** and **Java 21**, deployed using **Docker** and 
 The system provides:
 - Automatic route optimization for drivers
 - Multi-operator shuttle dispatching
-- Trip tracking and feedback from passengers
 - Keycloak integration for authentication & authorization
 
 ---
