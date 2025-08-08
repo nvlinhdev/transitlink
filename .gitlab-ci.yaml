@@ -1,0 +1,321 @@
+variables:
+  DOCKER_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend
+  USER: transitlink
+  PROJECT_DIR: "/srv/transitlink"
+  BACKUPS_DIR: "/backups"
+  GRADLE_VERSION: "8.14.3-jdk21-alpine"
+  DOCKER_VERSION: "28.3.3"
+  ALPINE_VERSION: "3.22.1"
+  APP_DB_CONTAINER: "transitlink-db"
+  APP_DB_NAME: "transitlink"
+  APP_CONTAINER: "transitlink"
+  KEYCLOAK_DB_CONTAINER: "keycloak-db"
+  KEYCLOAK_DB_NAME: "keycloak"
+  KEYCLOAK_CONTAINER: "keycloak"
+
+stages:
+  - test
+  - docker-publish
+  - backup
+  - deploy
+  - cleanup
+
+unit-tests:
+  stage: test
+  image: gradle:${GRADLE_VERSION}
+  script:
+    - gradle clean unitTest --no-daemon --stacktrace --info
+  artifacts:
+    paths:
+      - build/jacoco
+  only:
+    - dev
+    - main
+
+build-and-push-image:
+  stage: docker-publish
+  image: docker:${DOCKER_VERSION}
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - set -e
+    - docker buildx build --platform linux/amd64 -t $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA .
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - docker tag $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA $DOCKER_IMAGE:$CI_COMMIT_REF_NAME
+    - docker push $DOCKER_IMAGE:$CI_COMMIT_REF_NAME
+    - docker push $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
+  only:
+    - dev
+    - main
+
+backup_data:
+  stage: backup
+  image: alpine:${ALPINE_VERSION}
+  before_script:
+    - apk add --no-cache openssh
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - set -e
+    - |
+      ssh $USER@$HOST << EOF
+        set -e
+        cd $PROJECT_DIR/script
+        ./pg_tool.sh backup -c $APP_DB_CONTAINER -n $APP_DB_NAME -u $APP_DB_USER -p $APP_DB_PASS -f $CI_COMMIT_SHORT_SHA --backup-dir $BACKUPS_DIR/database/$APP_DB_NAME
+        ./pg_tool.sh backup -c $KEYCLOAK_DB_CONTAINER -n $KEYCLOAK_DB_NAME -u $KEYCLOAK_DB_USER -p $KEYCLOAK_DB_PASS -f $CI_COMMIT_SHORT_SHA --backup-dir $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME
+        
+        # Backup entire transitlink directory
+        TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+        mkdir -p $BACKUPS_DIR/transitlink
+        
+        echo "Backing up entire transitlink directory..."
+        tar -czf $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz -C $PROJECT_DIR transitlink/
+        
+        # Tạo info file cho transitlink backup
+        cat > $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.info << INFO_EOF
+        Transitlink backup: $CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz
+        Source: $PROJECT_DIR/transitlink/
+        Size: \$(du -sh $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz | cut -f1)
+        Total files: \$(find $PROJECT_DIR/transitlink -type f 2>/dev/null | wc -l)
+        Total dirs: \$(find $PROJECT_DIR/transitlink -type d 2>/dev/null | wc -l)
+        Commit: $CI_COMMIT_SHORT_SHA
+        Branch: $CI_COMMIT_REF_NAME
+        Date: \$(date)
+        Contents:
+        \$(ls -la $PROJECT_DIR/transitlink/)
+        INFO_EOF
+      
+        echo "=== Backup Info ==="
+        echo "Commit: $CI_COMMIT_SHORT_SHA"
+        echo "Branch: $CI_COMMIT_REF_NAME"
+        echo "Pipeline: $CI_PIPELINE_ID"
+        echo "Job: $CI_JOB_ID"
+        echo ""
+        # In ra file .info mới nhất cho API database
+        echo "=== API Database Backup Info ==="
+        cat $BACKUPS_DIR/database/$APP_DB_NAME/$CI_COMMIT_SHORT_SHA-*.info || echo "No API backup info found"
+        echo ""
+      
+        # In ra file .info mới nhất cho Keycloak database
+        echo "=== Keycloak Database Backup Info ==="
+        cat $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$CI_COMMIT_SHORT_SHA-*.info || echo "No Keycloak backup info found"
+      
+        echo "=== Transitlink Directory Backup ==="
+        cat $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-*.info 2>/dev/null || echo "No transitlink backup info found"  
+      EOF
+  only:
+    - main
+
+deploy:
+  stage: deploy
+  image: alpine:${ALPINE_VERSION}
+  before_script:
+    - apk add --no-cache openssh curl
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - set -e
+    - |
+      # Tạo override file với image mới
+      cat > compose.api.yaml << EOF
+      services:
+        transitlink:
+          image: $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
+      EOF
+
+    # Copy override file lên server staging
+    - scp compose.api.yaml $USER@$HOST:$BACKUPS_DIR/api/api-$CI_COMMIT_SHORT_SHA.yaml
+
+    - |
+      ssh $USER@$HOST << EOF
+        set -e
+        cd $PROJECT_DIR
+      
+        # Tạo symbolic link đến override file mới
+        ln -sf $BACKUPS_DIR/api/api-$CI_COMMIT_SHORT_SHA.yaml compose.api.yaml
+      
+        # Stop và start lại containers
+        docker compose -f compose.yaml -f compose.prod.yaml -f compose.api.yaml -f compose.web.yaml --env-file .env.prod down || true
+        docker compose -f compose.yaml -f compose.prod.yaml -f compose.api.yaml -f compose.web.yaml --env-file .env.prod up -d
+      
+        # Health check
+        echo "Waiting for service to be ready..."
+        timeout 300 sh -c 'until curl -f http://localhost/actuator/health; do echo "Waiting..."; sleep 5; done' || echo "Health check timeout - please verify manually"
+      
+        echo "deployment completed successfully!"
+        echo "Deployed version: $CI_COMMIT_SHORT_SHA"
+        echo "Current override: \$(readlink compose.api.yaml)"
+      EOF
+  environment:
+    name: staging
+  only:
+    - main
+
+rollback:
+  stage: deploy
+  image: alpine:${ALPINE_VERSION}
+  before_script:
+    - apk add --no-cache openssh curl
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - |
+      if [ -z "$ROLLBACK_TAG" ]; then
+        echo "ERROR: ROLLBACK_TAG variable is required"
+        echo "Usage: Set ROLLBACK_TAG to commit SHA you want to rollback to"
+        exit 1
+      fi
+      
+      ssh $USER@$HOST << EOF
+        set -e
+      
+        echo "=== Starting Rollback to $ROLLBACK_TAG ==="
+      
+        # Check if backup files exist
+        echo "Checking backup files..."
+        BACKUP_ERRORS=0
+      
+        # Check database backups
+        if [ ! -f "$BACKUPS_DIR/database/$APP_DB_NAME/$ROLLBACK_TAG-"*.dump ]; then
+          echo "ERROR: Database backup for $APP_DB_NAME with tag $ROLLBACK_TAG not found!"
+          ls -la $BACKUPS_DIR/database/$APP_DB_NAME/$ROLLBACK_TAG-* 2>/dev/null || echo "No backups found for this tag"
+          BACKUP_ERRORS=\$((BACKUP_ERRORS + 1))
+        fi
+      
+        if [ ! -f "$BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$ROLLBACK_TAG-"*.dump ]; then
+          echo "ERROR: Database backup for $KEYCLOAK_DB_NAME with tag $ROLLBACK_TAG not found!"
+          ls -la $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$ROLLBACK_TAG-* 2>/dev/null || echo "No backups found for this tag"
+          BACKUP_ERRORS=\$((BACKUP_ERRORS + 1))
+        fi
+      
+        # Check transitlink data backup
+        if [ ! -f "$BACKUPS_DIR/transitlink/$ROLLBACK_TAG-transitlink-"*.tar.gz ]; then
+          echo "ERROR: Transitlink data backup with tag $ROLLBACK_TAG not found!"
+          ls -la $BACKUPS_DIR/transitlink/$ROLLBACK_TAG-* 2>/dev/null || echo "No backups found for this tag"
+          BACKUP_ERRORS=\$((BACKUP_ERRORS + 1))
+        fi
+      
+        # Check compose files
+        if [ ! -f "$BACKUPS_DIR/api/api-$ROLLBACK_TAG.yaml" ]; then
+          echo "ERROR: Compose file api-$ROLLBACK_TAG.yaml not found!"
+          ls -la $BACKUPS_DIR/api/api-*.yaml 2>/dev/null || echo "No compose backups found"
+          BACKUP_ERRORS=\$((BACKUP_ERRORS + 1))
+        fi
+      
+        if [ \$BACKUP_ERRORS -gt 0 ]; then
+          echo "Found \$BACKUP_ERRORS errors. Aborting rollback."
+          exit 1
+        fi
+      
+        echo "All backup files found. Proceeding with rollback..."
+      
+        # Stop applications before rollback
+        echo "=== Stopping Applications ==="
+        cd $PROJECT_DIR
+        docker compose -f compose.yaml -f compose.prod.yaml -f compose.api.yaml -f compose.web.yaml --env-file .env.prod down || true
+      
+        # Wait for containers to stop
+        sleep 5
+      
+        # Rollback Databases
+        echo "=== Restoring Databases ==="
+        cd $PROJECT_DIR/script
+      
+        # Find the exact backup files
+        APP_DB_BACKUP=\$(ls -t $BACKUPS_DIR/database/$APP_DB_NAME/$ROLLBACK_TAG-*.dump | head -1)
+        KEYCLOAK_DB_BACKUP=\$(ls -t $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$ROLLBACK_TAG-*.dump | head -1)
+      
+        echo "Restoring $APP_DB_NAME database..."
+        ./pg_tool.sh restore "\$APP_DB_BACKUP" \
+          -c $APP_DB_CONTAINER \
+          -n $APP_DB_NAME \
+          -u $APP_DB_USER \
+          -p $APP_DB_PASS \
+          -s $APP_CONTAINER \
+          -y -d
+      
+        echo "Restoring $KEYCLOAK_DB_NAME database..."  
+        ./pg_tool.sh restore "\$KEYCLOAK_DB_BACKUP" \
+          -c $KEYCLOAK_DB_CONTAINER \
+          -n $KEYCLOAK_DB_NAME \
+          -u $KEYCLOAK_DB_USER \
+          -p $KEYCLOAK_DB_PASS \
+          -s $KEYCLOAK_CONTAINER \
+          -y -d
+      
+        # Rollback Transitlink Data
+        echo "=== Restoring Transitlink Data ==="
+        TRANSITLINK_BACKUP=\$(ls -t $BACKUPS_DIR/transitlink/$ROLLBACK_TAG-transitlink-*.tar.gz | head -1)
+      
+        if [ -d "$PROJECT_DIR/transitlink" ]; then
+          echo "Backing up current transitlink data..."
+          CURRENT_BACKUP_TIME=\$(date +%Y%m%d_%H%M%S)
+          mv $PROJECT_DIR/transitlink $PROJECT_DIR/transitlink.backup.\$CURRENT_BACKUP_TIME
+        fi
+      
+        echo "Extracting transitlink data from backup..."
+        tar -xzvf "\$TRANSITLINK_BACKUP" -C $PROJECT_DIR
+      
+        # Update compose file
+        echo "=== Updating Compose Configuration ==="
+        cd $PROJECT_DIR
+        ln -sf $BACKUPS_DIR/api/api-$ROLLBACK_TAG.yaml compose.api.yaml
+      
+        # Start applications
+        echo "=== Starting Applications ==="
+        docker compose -f compose.yaml -f compose.prod.yaml -f compose.api.yaml --env-file .env.prod up -d
+      
+        # Wait for services to be ready
+        echo "Waiting for services to start..."
+        sleep 10
+      
+        # Health check
+        echo "=== Health Check ==="
+        echo "Checking database connections..."
+        docker exec $APP_DB_CONTAINER pg_isready -U $APP_DB_USER -d $APP_DB_NAME || echo "Warning: App DB not ready"
+        docker exec $KEYCLOAK_DB_CONTAINER pg_isready -U $KEYCLOAK_DB_USER -d $KEYCLOAK_DB_NAME || echo "Warning: Keycloak DB not ready"
+      
+        echo "Checking container status..."
+        docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+      
+        # Display rollback summary
+        echo "=== Rollback Summary ==="
+        echo "Target Tag: $ROLLBACK_TAG"
+        echo "App DB restored from: \$(basename "\$APP_DB_BACKUP")"
+        echo "Keycloak DB restored from: \$(basename "\$KEYCLOAK_DB_BACKUP")"
+        echo "Transitlink data restored from: \$(basename "\$TRANSITLINK_BACKUP")"
+        echo "Compose file: api-$ROLLBACK_TAG.yaml"
+        echo "Completed at: \$(date)"
+        echo ""
+      
+        # Show backup info
+        echo "=== Restored Backup Details ==="
+        cat $BACKUPS_DIR/database/$APP_DB_NAME/$ROLLBACK_TAG-*.info 2>/dev/null || echo "No app DB backup info"
+        echo ""
+        cat $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$ROLLBACK_TAG-*.info 2>/dev/null || echo "No keycloak DB backup info"
+        echo ""
+        cat $BACKUPS_DIR/transitlink/$ROLLBACK_TAG-transitlink-*.info 2>/dev/null || echo "No transitlink backup info"
+      
+        echo "=== Rollback to $ROLLBACK_TAG completed successfully! ==="
+      EOF
+  only:
+    - main
+  when: manual
+  allow_failure: false
+  variables:
+    ROLLBACK_TAG: ""
