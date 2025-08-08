@@ -1,3 +1,11 @@
+spec:
+  inputs:
+    rollback_tag:
+      description: "Commit SHA hoặc tag để rollback"
+      type: string
+      default: ""
+
+---
 variables:
   DOCKER_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend
   USER: transitlink
@@ -169,6 +177,8 @@ deploy:
 rollback:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
+  variables:
+    ROLLBACK_TAG: "$[[ inputs.rollback_tag ]]"
   before_script:
     - apk add --no-cache openssh curl
     - mkdir -p ~/.ssh
@@ -321,5 +331,3 @@ rollback:
     - main
   when: manual
   allow_failure: false
-  variables:
-    ROLLBACK_TAG: ""
