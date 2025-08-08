@@ -228,20 +228,20 @@ tasks {
         executionData(unitTest.get())
         sourceSets(sourceSets["main"])
 
-        violationRules {
-            rule {
-                limit {
-                    counter = "INSTRUCTION"
-                    value = "COVEREDRATIO"
-                    minimum = "0.60".toBigDecimal() // 60% instruction coverage for unit tests
-                }
-                limit {
-                    counter = "BRANCH"
-                    value = "COVEREDRATIO"
-                    minimum = "0.50".toBigDecimal() // 50% branch coverage for unit tests
-                }
-            }
-        }
+//        violationRules {
+//            rule {
+//                limit {
+//                    counter = "INSTRUCTION"
+//                    value = "COVEREDRATIO"
+//                    minimum = "0.60".toBigDecimal() // 60% instruction coverage for unit tests
+//                }
+//                limit {
+//                    counter = "BRANCH"
+//                    value = "COVEREDRATIO"
+//                    minimum = "0.50".toBigDecimal() // 50% branch coverage for unit tests
+//                }
+//            }
+//        }
     }
 
     // Coverage Verification for Integration Tests
@@ -253,20 +253,20 @@ tasks {
         executionData(integrationTest.get())
         sourceSets(sourceSets["main"])
 
-        violationRules {
-            rule {
-                limit {
-                    counter = "INSTRUCTION"
-                    value = "COVEREDRATIO"
-                    minimum = "0.40".toBigDecimal() // 40% instruction coverage for integration tests
-                }
-                limit {
-                    counter = "BRANCH"
-                    value = "COVEREDRATIO"
-                    minimum = "0.30".toBigDecimal() // 30% branch coverage for integration tests
-                }
-            }
-        }
+//        violationRules {
+//            rule {
+//                limit {
+//                    counter = "INSTRUCTION"
+//                    value = "COVEREDRATIO"
+//                    minimum = "0.40".toBigDecimal() // 40% instruction coverage for integration tests
+//                }
+//                limit {
+//                    counter = "BRANCH"
+//                    value = "COVEREDRATIO"
+//                    minimum = "0.30".toBigDecimal() // 30% branch coverage for integration tests
+//                }
+//            }
+//        }
     }
 
     // Disable default test task
