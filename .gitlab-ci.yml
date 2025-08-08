@@ -19,6 +19,38 @@ stages:
   - backup
   - deploy
 
+# test
+deploy_manual:
+  stage: deploy
+  image: alpine:latest
+  only: 
+    - main
+  script:
+    - echo "=== DEPLOYMENT STARTED ==="
+    - echo "Environment:" ${TARGET_ENVIRONMENT:-staging}
+    - echo "Version:" ${DEPLOY_VERSION:-latest}
+    - echo "Debug Mode:" ${DEBUG_MODE:-false}
+    - echo "Replicas:" ${REPLICA_COUNT:-3}
+    - |
+      TARGET_ENV=${TARGET_ENVIRONMENT:-staging}
+      if [ "$TARGET_ENV" = "production" ]; then
+        echo "🚀 Deploying to PRODUCTION!"
+        echo "Extra security checks enabled..."
+      else
+        echo "📦 Deploying to $TARGET_ENV"
+      fi
+    - echo "Simulating deployment process..."
+    - sleep 3
+    - echo "✅ Deployment completed successfully!"
+  variables:
+    TARGET_ENVIRONMENT: "staging"
+    DEPLOY_VERSION: "latest"
+    DEBUG_MODE: "false"
+    REPLICA_COUNT: "3"
+  when: manual
+  allow_failure: false
+# end test
+
 unit-tests:
   stage: test
   image: gradle:${GRADLE_VERSION}
