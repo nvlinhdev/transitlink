@@ -166,27 +166,14 @@ deploy:
   only:
     - main
 
-rollback_input:
-  stage: deploy
-  when: manual
-  variables:
-    ROLLBACK_TAG: ""
-  script:
-    - |
-      if [ -z "$ROLLBACK_TAG" ]; then
-        echo "ERROR: Please set ROLLBACK_TAG when running this job from UI"
-        exit 1
-      fi
-    - echo "ROLLBACK_TAG=$ROLLBACK_TAG" > rollback.env
-  artifacts:
-    reports:
-      dotenv: rollback.env
-
 rollback:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
-  needs:
-    - rollback_input
+  variables:
+    ROLLBACK_TAG: ""    # Giá trị mặc định rỗng → sẽ yêu cầu nhập khi Play
+  when: manual
+  only:
+    - main
   before_script:
     - apk add --no-cache openssh curl
     - mkdir -p ~/.ssh
@@ -335,5 +322,3 @@ rollback:
       
         echo "=== Rollback to $ROLLBACK_TAG completed successfully! ==="
       EOF
-  only:
-    - main
