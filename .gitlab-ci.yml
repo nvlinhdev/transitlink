@@ -23,14 +23,14 @@ stages:
 unit-tests:
   stage: test
   image: gradle:${GRADLE_VERSION}
+  only:
+    - dev
+    - main
   script:
     - gradle clean unitTest --no-daemon --stacktrace --info
   artifacts:
     paths:
       - build/jacoco
-  only:
-    - dev
-    - main
 
 build-and-push-image:
   stage: docker-publish
@@ -40,6 +40,9 @@ build-and-push-image:
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
+  only:
+    - dev
+    - main
   script:
     - set -e
     - docker buildx build --platform linux/amd64 -t $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA .
@@ -47,13 +50,12 @@ build-and-push-image:
     - docker tag $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA $DOCKER_IMAGE:$CI_COMMIT_REF_NAME
     - docker push $DOCKER_IMAGE:$CI_COMMIT_REF_NAME
     - docker push $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
-  only:
-    - dev
-    - main
 
 backup_data:
   stage: backup
   image: alpine:${ALPINE_VERSION}
+  only:
+    - main
   before_script:
     - apk add --no-cache openssh
     - mkdir -p ~/.ssh
@@ -113,12 +115,12 @@ backup_data:
         echo "=== Transitlink Directory Backup ==="
         cat $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-*.info 2>/dev/null || echo "No transitlink backup info found"  
       EOF
-  only:
-    - main
 
 deploy:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
+  only:
+    - main
   before_script:
     - apk add --no-cache openssh curl
     - mkdir -p ~/.ssh
@@ -161,19 +163,13 @@ deploy:
         echo "Deployed version: $CI_COMMIT_SHORT_SHA"
         echo "Current override: \$(readlink compose.api.yaml)"
       EOF
-  environment:
-    name: staging
-  only:
-    - main
 
 rollback:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
   variables:
-    ROLLBACK_TAG: ""    # Giá trị mặc định rỗng → sẽ yêu cầu nhập khi Play
+    ROLLBACK_TAG: ""
   when: manual
-  only:
-    - main
   before_script:
     - apk add --no-cache openssh curl
     - mkdir -p ~/.ssh
