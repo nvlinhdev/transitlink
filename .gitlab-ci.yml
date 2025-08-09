@@ -41,9 +41,6 @@ unit-tests:
   stage: test
   image: gradle:${GRADLE_VERSION}
   rules:
-    - if: '"$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^(feat|fix|doc|hotfix|test)\/.+/"'
-      <<: *changes 
-      when: always   
     - if: '"$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/"'
       <<: *changes
       when: always
@@ -66,13 +63,7 @@ build-and-push-image:
   rules:
     - if: '"$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix)\/.+/"'
       <<: *changes
-      when: on_success
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^(feat|fix|doc)\/.+/ && $CI_MERGE_REQUEST_TARGET_BRANCH == "dev"'
-      when: on_success
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev" && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
-      when: on_success
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^hotfix\/.+/ && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
-      when: on_success
+      when: always
     - when: never
   needs:
     - job: unit-tests
@@ -95,9 +86,8 @@ backup_app_db:
     matrix:
       - BACKUP_TYPE: "app_db"
   rules:
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev" && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
-      when: on_success
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^hotfix\/.+/ && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      <<: *changes
       when: on_success
     - when: never
   needs:
@@ -128,9 +118,8 @@ backup_keycloak_db:
     matrix:
       - BACKUP_TYPE: "keycloak_db"
   rules:
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev" && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
-      when: on_success
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^hotfix\/.+/ && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      <<: *changes
       when: on_success
     - when: never
   needs:
@@ -161,9 +150,8 @@ backup_transitlink_data:
     matrix:
       - BACKUP_TYPE: "transitlink_data"
   rules:
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev" && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
-      when: on_success
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^hotfix\/.+/ && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      <<: *changes
       when: on_success
     - when: never
   needs:
@@ -202,9 +190,8 @@ deploy:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
   rules:
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev" && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
-      when: on_success
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^hotfix\/.+/ && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      <<: *changes
       when: on_success
     - when: never
   needs:
@@ -243,9 +230,8 @@ rollback:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
   rules:
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev" && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
-      when: manual
-    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^hotfix\/.+/ && $CI_MERGE_REQUEST_TARGET_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      <<: *changes
       when: manual
     - when: never
   variables:
