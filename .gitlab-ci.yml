@@ -44,6 +44,9 @@ unit-tests:
     - if: '"$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/"'
       <<: *changes
       when: always
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      <<: *changes
+      when: always
     - when: never  
   script:
     - gradle clean unitTest --no-daemon --stacktrace --info
@@ -63,7 +66,10 @@ build-and-push-image:
   rules:
     - if: '"$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix)\/.+/"'
       <<: *changes
-      when: always
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      <<: *changes
+      when: on_success
     - when: never
   needs:
     - job: unit-tests
