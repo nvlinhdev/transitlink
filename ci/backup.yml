@@ -1,0 +1,35 @@
+backup_app_db:
+  stage: backup
+  <<: *alpine_template
+  <<: *rules_main_only
+  <<: *retry_config
+  needs:
+    - job: build-and-push-image
+      artifacts: false
+  script:
+    - chmod +x scripts/backup/backup-app-db.sh
+    - ./scripts/backup/backup-app-db.sh
+
+backup_keycloak_db:
+  stage: backup
+  <<: *alpine_template
+  <<: *rules_main_only
+  <<: *retry_config
+  needs:
+    - job: build-and-push-image
+      artifacts: false
+  script:
+    - chmod +x scripts/backup/backup-keycloak-db.sh
+    - ./scripts/backup/backup-keycloak-db.sh
+
+backup_transitlink_data:
+  stage: backup
+  <<: *alpine_template
+  <<: *rules_main_only
+  <<: *retry_config
+  needs:
+    - job: build-and-push-image
+      artifacts: false
+  script:
+    - chmod +x scripts/backup/backup-data.sh
+    - ./scripts/backup/backup-data.sh

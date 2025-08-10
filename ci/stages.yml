@@ -1,0 +1,7 @@
+stages:
+  - test
+  - merge
+  - docker-publish
+  - backup
+  - deploy
+  - cleanup

@@ -1,0 +1,44 @@
+create_merge_dev:
+  stage: merge
+  <<: *curl_template
+  needs:
+    - job: "unit-tests"
+    - job: "integration-tests"
+  <<: *rules_feat_fix_success
+  script:
+    - chmod +x scripts/merge/create-mr-dev.sh
+    - ./scripts/merge/create-mr-dev.sh
+  artifacts:
+    reports:
+      dotenv: merge_request_dev.env
+    expire_in: 1 hour
+
+create_merge_main:
+  stage: merge
+  <<: *curl_template
+  needs:
+    - job: "unit-tests"
+    - job: "integration-tests"
+  <<: *rules_hotfix_success
+  script:
+    - chmod +x scripts/merge/create-mr-main.sh
+    - ./scripts/merge/create-mr-main.sh
+  artifacts:
+    reports:
+      dotenv: merge_request_main.env
+    expire_in: 1 hour
+
+approve_merge_request:
+  stage: merge
+  <<: *curl_template
+  <<: *rules_manual_merge
+  needs:
+    - job: "create_merge_dev"
+      artifacts: true
+      optional: true
+    - job: "create_merge_main"
+      artifacts: true
+      optional: true
+  script:
+    - chmod +x scripts/merge/approve-merge.sh
+    - ./scripts/merge/approve-merge.sh
