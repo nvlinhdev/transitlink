@@ -12,6 +12,9 @@ variables:
   KEYCLOAK_DB_CONTAINER: "keycloak-db"
   KEYCLOAK_DB_NAME: "keycloak"
   KEYCLOAK_CONTAINER: "keycloak"
+  POSTGRES_IMAGE: bitnami/postgresql:17.5.0-debian-12-r20
+  KEYCLOAK_IMAGE: bitnami/keycloak:26.3.1-debian-12-r2
+  REDIS_IMAGE: bitnami/redis:8.0.3-debian-12-r2
 
 .rules_changes: &changes
   changes:
@@ -41,19 +44,93 @@ unit-tests:
   stage: test
   image: gradle:${GRADLE_VERSION}
   rules:
-    - if: '"$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/"'
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/'
+      <<: *changes
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      <<: *changes
+      when: always
+  except: 
+  script:
+    - gradle clean unitTest --no-daemon --stacktrace --info
+  artifacts:
+    paths:
+      - build/
+      - .gradle/
+
+integration-tests:
+  stage: test
+  image: gradle:${GRADLE_VERSION}
+  needs:
+    - job: "unit-tests"
+      artifacts: true
+  services:
+    - name: docker:${DOCKER_VERSION}-dind
+      alias: docker
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
+    TESTCONTAINERS_HOST_OVERRIDE: docker
+    TESTCONTAINERS_RYUK_DISABLED: "true"
+    TESTCONTAINERS_CHECKS_DISABLE: "true"
+    GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/'
+      <<: *changes
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      <<: *changes
+      when: always
+    - when: never
+  before_script:
+    - apk add --no-cache docker-cli curl
+    - until docker info; do echo "Waiting for docker to start..."; sleep 1; done
+    - docker version
+    - gradle --version
+    - docker system prune -f || true
+    - docker pull $POSTGRES_IMAGE
+    - docker pull $REDIS_IMAGE
+    - docker pull $KEYCLOAK_IMAGE
+    - echo "$ENV_FILE" > .env
+    - export $(cat .env | xargs)
+  script:
+    - gradle integrationTest --no-daemon --stacktrace --info
+  after_script:
+    - docker container prune -f || true
+    - docker image prune -f || true
+  artifacts:
+    when: always
+    paths:
+      - build/
+      - .gradle/
+    expire_in: 1 week
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+
+generate_report:
+  stage: test
+  image: gradle:${GRADLE_VERSION}
+  needs:
+    - job: "integration-tests"
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/'
       <<: *changes
       when: always
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
       <<: *changes
       when: always
     - when: never  
+  before_script:
+    - echo "$SONAR_TOKEN"
   script:
-    - gradle clean unitTest --no-daemon --stacktrace --info
-  artifacts:
-    paths:
-      - build/jacoco
-    expire_in: 1 week
+    - gradle jacocoCombinedTestReport --no-daemon --stacktrace --info
+    - gradle sonar
 
 build-and-push-image:
   stage: docker-publish  
@@ -64,7 +141,7 @@ build-and-push-image:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
   rules:
-    - if: '"$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix)\/.+/"'
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix)\/.+/'
       <<: *changes
       when: on_success
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -72,7 +149,9 @@ build-and-push-image:
       when: on_success
     - when: never
   needs:
-    - job: unit-tests
+    - job: "unit-tests"
+      artifacts: false
+    - job: "integration-tests"
       artifacts: false
   script:
       - set -e
@@ -280,10 +359,6 @@ rollback:
           exit 1
         fi
         echo "All backup files found. Proceeding with rollback..."
-        echo "=== Stopping Applications ==="
-        cd $PROJECT_DIR
-        docker compose -f compose.yaml -f compose.prod.yaml -f compose.api.yaml -f compose.web.yaml --env-file .env.prod down || true
-        sleep 5
         echo "=== Restoring Databases ==="
         cd $PROJECT_DIR/script
         APP_DB_BACKUP=\$(ls -t $BACKUPS_DIR/database/$APP_DB_NAME/$ROLLBACK_TAG-*.dump | head -1)
@@ -306,11 +381,6 @@ rollback:
           -y -d
         echo "=== Restoring Transitlink Data ==="
         TRANSITLINK_BACKUP=\$(ls -t $BACKUPS_DIR/transitlink/$ROLLBACK_TAG-transitlink-*.tar.gz | head -1)
-        if [ -d "$PROJECT_DIR/transitlink" ]; then
-          echo "Backing up current transitlink data..."
-          CURRENT_BACKUP_TIME=\$(date +%Y%m%d_%H%M%S)
-          mv $PROJECT_DIR/transitlink $PROJECT_DIR/transitlink.backup.\$CURRENT_BACKUP_TIME
-        fi
         echo "Extracting transitlink data from backup..."
         tar -xzvf "\$TRANSITLINK_BACKUP" -C $PROJECT_DIR
         echo "=== Updating Compose Configuration ==="
