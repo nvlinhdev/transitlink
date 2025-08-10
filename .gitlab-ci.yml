@@ -6,7 +6,6 @@ variables:
   GRADLE_VERSION: "8.14.3-jdk21-alpine"
   DOCKER_VERSION: "28.3.3"
   ALPINE_VERSION: "3.22.1"
-  CURL_VERSION: "8.15.0"
   APP_DB_CONTAINER: "transitlink-db"
   APP_DB_NAME: "transitlink"
   APP_CONTAINER: "transitlink"
@@ -225,7 +224,7 @@ push-report:
 
 create_merge_dev:
   stage: merge
-  image: curlimages/curl:$CURL_VERSION
+  image: alpine:${ALPINE_VERSION}
   needs:
     - job: "unit-tests"
       artifacts: false
@@ -233,7 +232,7 @@ create_merge_dev:
       artifacts: false
   <<: *rules_feat_fix
   before_script:
-    - apk add --no-cache jq
+    - apk add --no-cache curl jq
     - chmod +x scripts/create-merge-request.sh
   script:
     - ./scripts/create-merge-request.sh "dev"
@@ -244,7 +243,7 @@ create_merge_dev:
 
 create_merge_main:
   stage: merge
-  image: curlimages/curl:$CURL_VERSION
+  image: alpine:${ALPINE_VERSION}
   needs:
     - job: "unit-tests"
       artifacts: false
@@ -252,7 +251,7 @@ create_merge_main:
       artifacts: false
   <<: *rules_hotfix
   before_script:
-    - apk add --no-cache jq
+    - apk add --no-cache curl jq
     - chmod +x scripts/create-merge-request.sh
   script:
     - ./scripts/create-merge-request.sh "main"
@@ -263,7 +262,7 @@ create_merge_main:
 
 approve_merge_request:
   stage: merge
-  image: curlimages/curl:$CURL_VERSION
+  image: alpine:${ALPINE_VERSION}
   <<: *rules_feat_fix_hotfix
   needs:
     - job: "create_merge_dev"
@@ -273,7 +272,7 @@ approve_merge_request:
       artifacts: true
       optional: true
   before_script:
-    - apk add --no-cache jq
+    - apk add --no-cache curl jq
     - chmod +x scripts/approve-merge-request.sh
   script:
     - ./scripts/approve-merge-request.sh
