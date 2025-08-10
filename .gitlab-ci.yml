@@ -6,6 +6,7 @@ variables:
   GRADLE_VERSION: "8.14.3-jdk21-alpine"
   DOCKER_VERSION: "28.3.3"
   ALPINE_VERSION: "3.22.1"
+  CURL_VERSION: "8.15.0"
   APP_DB_CONTAINER: "transitlink-db"
   APP_DB_NAME: "transitlink"
   APP_CONTAINER: "transitlink"
@@ -35,6 +36,7 @@ variables:
 
 stages:
   - test
+  - merge
   - docker-publish
   - backup
   - deploy
@@ -44,26 +46,31 @@ unit-tests:
   stage: test
   image: gradle:${GRADLE_VERSION}
   rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
       <<: *changes
       when: always
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
       <<: *changes
       when: always
-  except: 
+    - when: never
   script:
     - gradle clean unitTest --no-daemon --stacktrace --info
   artifacts:
+    when: always
     paths:
-      - build/
-      - .gradle/
+      - build/jacoco/unitTest.exec
+      - build/test-results/unitTest/
+      - build/reports/tests/unitTest
+    reports:
+      junit:
+        - build/test-results/unitTest/TEST-*.xml
+    expire_in: 1 week
 
 integration-tests:
   stage: test
   image: gradle:${GRADLE_VERSION}
-  needs:
-    - job: "unit-tests"
-      artifacts: true
   services:
     - name: docker:${DOCKER_VERSION}-dind
       alias: docker
@@ -77,7 +84,9 @@ integration-tests:
     TESTCONTAINERS_CHECKS_DISABLE: "true"
     GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
   rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
       <<: *changes
       when: always
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -103,8 +112,12 @@ integration-tests:
   artifacts:
     when: always
     paths:
-      - build/
-      - .gradle/
+      - build/jacoco/integrationTest.exec
+      - build/test-results/integrationTest/
+      - build/reports/tests/integrationTest/
+    reports:
+      junit:
+        - build/test-results/integrationTest/TEST-*.xml    
     expire_in: 1 week
   retry:
     max: 2
@@ -116,21 +129,276 @@ generate_report:
   stage: test
   image: gradle:${GRADLE_VERSION}
   needs:
+    - job: "unit-tests"
+      artifacts: true
     - job: "integration-tests"
       artifacts: true
   rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
       <<: *changes
-      when: always
+      when: on_success
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
       <<: *changes
-      when: always
+      when: on_success
+    - when: never
+  script:
+    - gradle jacocoCombinedTestReport --no-daemon --stacktrace --info
+  artifacts:
+    when: always
+    paths:
+      - build/reports/jacoco/combined
+      - build/reports/jacoco/jacocoCombinedTestReport      
+    expire_in: 1 week
+
+push-report:
+  stage: test
+  image: gradle:${GRADLE_VERSION}
+  needs:
+    - job: "generate_report"
+      artifacts: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      <<: *changes
+      when: on_success
     - when: never  
   before_script:
     - echo "$SONAR_TOKEN"
   script:
-    - gradle jacocoCombinedTestReport --no-daemon --stacktrace --info
     - gradle sonar
+
+create_merge_dev:
+  stage: merge
+  image: curlimages/curl:$CURL_VERSION
+  needs:
+    - job: "unit-tests"
+    - job: "integration-tests"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix)\/.+/'
+      <<: *changes
+      when: on_success
+    - when: never
+  before_script:
+    - apk add --no-cache jq
+  script:
+    - |
+      echo "Creating merge request to dev branch..."
+      
+      EXISTING_MR=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests?source_branch=$CI_COMMIT_REF_NAME&target_branch=dev&state=opened" | \
+        jq '.[0].iid // empty')
+      
+      if [ -n "$EXISTING_MR" ]; then
+        echo "Merge request to dev already exists: !$EXISTING_MR"
+        echo "DEV_MR_IID=$EXISTING_MR" >> merge_request_dev.env
+      else
+
+        RESPONSE=$(curl -s -X POST \
+          --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
+          --header "Content-Type: application/json" \
+          --data '{
+            "source_branch": "'$CI_COMMIT_REF_NAME'",
+            "target_branch": "dev",
+            "title": "[DEV] '$CI_COMMIT_TITLE'",
+            "description": "**Auto MR to Development Branch**\n\n**Branch**: `'$CI_COMMIT_REF_NAME'` → `dev`\n**Commit**: '$CI_COMMIT_SHA'\n🚀 **Pipeline**: ['$CI_PIPELINE_URL']('$CI_PIPELINE_URL')\n\n---\n\n**Changes**:\n'$CI_COMMIT_DESCRIPTION'\n\n**Test Results**: All tests passed\n**Coverage Report**: Available in pipeline artifacts",
+            "remove_source_branch": true,
+            "squash": false,
+            "labels": "auto-mr,development"
+          }' \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests")
+        
+        DEV_MR_IID=$(echo $RESPONSE | jq '.iid')
+        
+        if [ -n "$DEV_MR_IID" ]; then
+          echo "Merge request to dev created: !$DEV_MR_IID"
+          echo "DEV_MR_IID=$DEV_MR_IID" >> merge_request_dev.env
+        else
+          echo "Failed to create merge request to dev"
+          echo "Response: $RESPONSE"
+          exit 1
+        fi
+      fi
+  artifacts:
+    reports:
+      dotenv: merge_request_dev.env
+    expire_in: 1 hour
+
+create_merge_main:
+  stage: merge
+  image: curlimages/curl:$CURL_VERSION
+  needs:
+    - job: "unit-tests"
+    - job: "integration-tests"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\/.+/'
+      <<: *changes
+      when: on_success
+    - when: never
+  before_script:
+    - apk add --no-cache jq
+  script:
+    - |
+      echo "Creating merge request to main branch..."
+      
+      EXISTING_MR=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests?source_branch=$CI_COMMIT_REF_NAME&target_branch=main&state=opened" | \
+        jq '.[0].iid // empty')
+      
+      if [ -n "$EXISTING_MR" ]; then
+        echo "Merge request to main already exists: !$EXISTING_MR"
+        echo "MAIN_MR_IID=$EXISTING_MR" >> merge_request_main.env
+      else
+        RESPONSE=$(curl -s -X POST \
+          --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
+          --header "Content-Type: application/json" \
+          --data '{
+            "source_branch": "'$CI_COMMIT_REF_NAME'",
+            "target_branch": "main",
+            "title": "[HOTFIX] '$CI_COMMIT_TITLE'",
+            "description": "**HOTFIX - Critical Fix to Production**\n\n **Branch**: `'$CI_COMMIT_REF_NAME'` → `main`\n **Commit**: '$CI_COMMIT_SHA'\n🚀 **Pipeline**: ['$CI_PIPELINE_URL']('$CI_PIPELINE_URL')\n\n---\n\n**Hotfix Details**:\n'$CI_COMMIT_DESCRIPTION'\n\n⚠️ **Priority**: HIGH\n✅ **Test Results**: All tests passed\n🔍 **Review Required**: Yes\n\n**Post-merge Actions**:\n- [ ] Deploy to production\n- [ ] Monitor for issues\n- [ ] Merge back to dev branch",
+            "remove_source_branch": false,
+            "squash": false,
+            "labels": "hotfix,critical,production"
+          }' \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests")
+        
+        MAIN_MR_IID=$(echo $RESPONSE | jq '.iid')
+        
+        if [ -n "$MAIN_MR_IID" ]; then
+          echo "Hotfix merge request to main created: !$MAIN_MR_IID"
+          echo "MAIN_MR_IID=$MAIN_MR_IID" >> merge_request_main.env
+        else
+          echo "Failed to create hotfix merge request to main"
+          echo "Response: $RESPONSE"
+          exit 1
+        fi
+      fi
+  artifacts:
+    reports:
+      dotenv: merge_request_main.env
+    expire_in: 1 hour
+
+approve_merge_request:
+  stage: merge
+  image: curlimages/curl:$CURL_VERSION
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
+      <<: *changes
+      when: manual
+      allow_failure: false
+    - when: never
+  needs:
+    - job: "create_merge_dev"
+      artifacts: true
+      optional: true
+    - job: "create_merge_main" 
+      artifacts: true
+      optional: true
+  before_script:
+    - apk add --no-cache jq
+  script:
+    - |
+      echo "Starting merge approval process..."
+      
+      if [[ "$CI_COMMIT_BRANCH" =~ ^(feat|fix)/.+ ]]; then
+        MR_IID=$DEV_MR_IID
+        TARGET_BRANCH="dev"
+        echo "Processing merge to dev branch: !$MR_IID"
+      elif [[ "$CI_COMMIT_BRANCH" =~ ^hotfix/.+ ]]; then
+        MR_IID=$MAIN_MR_IID  
+        TARGET_BRANCH="main"
+        echo "Processing hotfix merge to main branch: !$MR_IID"
+      else
+        echo "Unknown branch pattern: $CI_COMMIT_BRANCH"
+        exit 1
+      fi
+      
+      if [ -z "$MR_IID" ]; then
+        echo "MR_IID not found. Please ensure create_merge_* job completed successfully."
+        exit 1
+      fi
+      
+      echo "Checking merge request status..."
+      MR_INFO=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$MR_IID")
+      
+      MR_STATUS=$(echo $MR_INFO | jq '.detailed_merge_status // empty')
+      MR_STATE=$(echo $MR_INFO | jq '.state // empty')
+      
+      echo "MR State: $MR_STATE"
+      echo "Merge Status: $MR_STATUS"
+      
+      if [ "$MR_STATE" != "opened" ]; then
+        echo "Merge request is not open. Current state: $MR_STATE"
+        exit 1
+      fi
+      
+      if [ "$MR_STATUS" = "can_be_merged" ] || [ "$MR_STATUS" = "mergeable" ]; then
+        echo "Merge request is ready to merge"
+        
+        echo "Executing merge..."
+        MERGE_RESPONSE=$(curl -s -X PUT \
+          --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
+          --header "Content-Type: application/json" \
+          --data '{
+            "merge_commit_message": "Auto merge: '$CI_COMMIT_TITLE' (Pipeline #'$CI_PIPELINE_ID')\n\nBranch: '$CI_COMMIT_REF_NAME' → '$TARGET_BRANCH'\nCommit: '$CI_COMMIT_SHA'\nPipeline: '$CI_PIPELINE_URL'",
+            "should_remove_source_branch": true,
+            "squash": false
+          }' \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$MR_IID/merge")
+        
+        MERGE_STATE=$(echo $MERGE_RESPONSE | jq '.state // empty')
+        
+        if [ "$MERGE_STATE" = "merged" ]; then
+          echo "Merge request !$MR_IID merged successfully to $TARGET_BRANCH!"
+          
+          MERGE_SHA=$(echo $MERGE_RESPONSE | jq '.merge_commit_sha // empty')
+          echo "Merge commit SHA: $MERGE_SHA"
+          
+          echo "MERGED_TO_BRANCH=$TARGET_BRANCH" >> merge_result.env
+          echo "MERGE_COMMIT_SHA=$MERGE_SHA" >> merge_result.env
+          echo "MERGED_MR_IID=$MR_IID" >> merge_result.env
+          
+        else
+          echo "Failed to merge. Response: $MERGE_RESPONSE"
+          exit 1
+        fi
+      else
+        echo "Cannot merge. Status: $MR_STATUS"
+        
+        case $MR_STATUS in
+          "ci_must_pass")
+            echo "Reason: CI pipeline must pass before merge"
+            ;;
+          "discussions_not_resolved")
+            echo "Reason: All discussions must be resolved"
+            ;;
+          "not_approved")
+            echo "Reason: Merge request requires approval"
+            ;;
+          "conflict")
+            echo "Reason: Merge conflicts exist"
+            ;;
+          "draft_status")
+            echo "Reason: Merge request is in draft status"
+            ;;
+          *)
+            echo "Reason: $MR_STATUS"
+            ;;
+        esac
+        
+        echo "Please check the merge request manually: $CI_PROJECT_URL/-/merge_requests/$MR_IID"
+        exit 1
+      fi
 
 build-and-push-image:
   stage: docker-publish  
@@ -141,9 +409,8 @@ build-and-push-image:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
   rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix)\/.+/'
-      <<: *changes
-      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
       <<: *changes
       when: on_success
@@ -167,10 +434,9 @@ build-and-push-image:
 backup_app_db:
   stage: backup
   image: alpine:${ALPINE_VERSION}
-  parallel:
-    matrix:
-      - BACKUP_TYPE: "app_db"
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
     - if: '$CI_COMMIT_BRANCH == "main"'
       <<: *changes
       when: on_success
@@ -199,10 +465,9 @@ backup_app_db:
 backup_keycloak_db:
   stage: backup
   image: alpine:${ALPINE_VERSION}
-  parallel:
-    matrix:
-      - BACKUP_TYPE: "keycloak_db"
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
     - if: '$CI_COMMIT_BRANCH == "main"'
       <<: *changes
       when: on_success
@@ -231,10 +496,9 @@ backup_keycloak_db:
 backup_transitlink_data:
   stage: backup
   image: alpine:${ALPINE_VERSION}
-  parallel:
-    matrix:
-      - BACKUP_TYPE: "transitlink_data"
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
     - if: '$CI_COMMIT_BRANCH == "main"'
       <<: *changes
       when: on_success
@@ -275,6 +539,8 @@ deploy:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
     - if: '$CI_COMMIT_BRANCH == "main"'
       <<: *changes
       when: on_success
@@ -315,6 +581,8 @@ rollback:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
     - if: '$CI_COMMIT_BRANCH == "main"'
       <<: *changes
       when: manual
@@ -370,6 +638,7 @@ rollback:
           -u $APP_DB_USER \
           -p $APP_DB_PASS \
           -s $APP_CONTAINER \
+          --backup-dir $BACKUPS_DIR/database/$APP_DB_NAME \
           -y -d
         echo "Restoring $KEYCLOAK_DB_NAME database..."  
         ./pg_tool.sh restore "\$KEYCLOAK_DB_BACKUP" \
@@ -378,6 +647,7 @@ rollback:
           -u $KEYCLOAK_DB_USER \
           -p $KEYCLOAK_DB_PASS \
           -s $KEYCLOAK_CONTAINER \
+          --backup-dir $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME \
           -y -d
         echo "=== Restoring Transitlink Data ==="
         TRANSITLINK_BACKUP=\$(ls -t $BACKUPS_DIR/transitlink/$ROLLBACK_TAG-transitlink-*.tar.gz | head -1)
