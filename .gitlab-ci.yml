@@ -54,9 +54,14 @@ unit-tests:
   script:
     - gradle clean unitTest --no-daemon --stacktrace --info
   artifacts:
+    when: always
+    reports:
+      junit:
+        - build/test-results/unitTest/TEST-*.xml
     paths:
       - build/
       - .gradle/
+    expire_in: 1 week
 
 integration-tests:
   stage: test
@@ -102,6 +107,9 @@ integration-tests:
     - docker image prune -f || true
   artifacts:
     when: always
+    reports:
+      junit:
+        - build/test-results/integrationTest/TEST-*.xml
     paths:
       - build/
       - .gradle/
