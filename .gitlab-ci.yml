@@ -378,6 +378,7 @@ rollback:
           -u $APP_DB_USER \
           -p $APP_DB_PASS \
           -s $APP_CONTAINER \
+          --backup-dir $BACKUPS_DIR/database/$APP_DB_NAME
           -y -d
         echo "Restoring $KEYCLOAK_DB_NAME database..."  
         ./pg_tool.sh restore "\$KEYCLOAK_DB_BACKUP" \
@@ -386,6 +387,7 @@ rollback:
           -u $KEYCLOAK_DB_USER \
           -p $KEYCLOAK_DB_PASS \
           -s $KEYCLOAK_CONTAINER \
+          --backup-dir $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME
           -y -d
         echo "=== Restoring Transitlink Data ==="
         TRANSITLINK_BACKUP=\$(ls -t $BACKUPS_DIR/transitlink/$ROLLBACK_TAG-transitlink-*.tar.gz | head -1)
