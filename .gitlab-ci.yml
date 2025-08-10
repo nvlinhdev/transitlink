@@ -178,6 +178,8 @@ integration-tests:
   script:
     - gradle integrationTest --no-daemon --stacktrace --info
   after_script:
+    - pwd
+    - ls -R scripts
     - chmod +x scripts/docker-cleanup.sh
     - ./scripts/docker-cleanup.sh
   <<: *test_artifacts
