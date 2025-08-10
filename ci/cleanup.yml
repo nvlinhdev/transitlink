@@ -1,7 +1,0 @@
-cleanup_backups:
-  stage: cleanup
-  <<: *alpine_template
-  <<: *rules_schedule_only
-  script:
-    - chmod +x scripts/cleanup/cleanup-backups.sh
-    - ./scripts/cleanup/cleanup-backups.sh

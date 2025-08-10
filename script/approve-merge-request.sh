@@ -1,12 +1,9 @@
 #!/bin/bash
 set -e
 
-# Script approve và merge request
-# Usage: ./approve-merge.sh
-
 echo "Starting merge approval process..."
 
-# Xác định branch pattern và target
+# Determine target branch and MR IID based on branch pattern
 if [[ "$CI_COMMIT_BRANCH" =~ ^(feat|fix)/.+ ]]; then
     MR_IID=$DEV_MR_IID
     TARGET_BRANCH="dev"
@@ -20,55 +17,52 @@ else
     exit 1
 fi
 
-# Kiểm tra MR_IID
-if [ -z "$MR_IID" ] || [ "$MR_IID" = "null" ]; then
+if [ -z "$MR_IID" ]; then
     echo "MR_IID not found. Please ensure create_merge_* job completed successfully."
     exit 1
 fi
 
-# Kiểm tra status của MR
 echo "Checking merge request status..."
 MR_INFO=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
-  "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$MR_IID")
+    "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$MR_IID")
 
-MR_STATUS=$(echo $MR_INFO | jq -r '.detailed_merge_status // empty')
-MR_STATE=$(echo $MR_INFO | jq -r '.state // empty')
+MR_STATUS=$(echo $MR_INFO | jq '.detailed_merge_status // empty')
+MR_STATE=$(echo $MR_INFO | jq '.state // empty')
 
 echo "MR State: $MR_STATE"
 echo "Merge Status: $MR_STATUS"
 
-# Kiểm tra trạng thái MR
 if [ "$MR_STATE" != "opened" ]; then
     echo "Merge request is not open. Current state: $MR_STATE"
     exit 1
 fi
 
-# Thực hiện merge nếu có thể
 if [ "$MR_STATUS" = "can_be_merged" ] || [ "$MR_STATUS" = "mergeable" ]; then
     echo "Merge request is ready to merge"
 
     echo "Executing merge..."
     MERGE_RESPONSE=$(curl -s -X PUT \
-      --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
-      --header "Content-Type: application/json" \
-      --data '{
-        "merge_commit_message": "Auto merge: '$CI_COMMIT_TITLE' (Pipeline #'$CI_PIPELINE_ID')\n\nBranch: '$CI_COMMIT_REF_NAME' → '$TARGET_BRANCH'\nCommit: '$CI_COMMIT_SHA'\nPipeline: '$CI_PIPELINE_URL'",
-        "should_remove_source_branch": true,
-        "squash": false
-      }' \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$MR_IID/merge")
+        --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
+        --header "Content-Type: application/json" \
+        --data '{
+            "merge_commit_message": "Auto merge: '$CI_COMMIT_TITLE' (Pipeline #'$CI_PIPELINE_ID')\n\nBranch: '$CI_COMMIT_REF_NAME' → '$TARGET_BRANCH'\nCommit: '$CI_COMMIT_SHA'\nPipeline: '$CI_PIPELINE_URL'",
+            "should_remove_source_branch": true,
+            "squash": false
+        }' \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$MR_IID/merge")
 
-    MERGE_STATE=$(echo $MERGE_RESPONSE | jq -r '.state // empty')
+    MERGE_STATE=$(echo $MERGE_RESPONSE | jq '.state // empty')
 
     if [ "$MERGE_STATE" = "merged" ]; then
         echo "Merge request !$MR_IID merged successfully to $TARGET_BRANCH!"
 
-        MERGE_SHA=$(echo $MERGE_RESPONSE | jq -r '.merge_commit_sha // empty')
+        MERGE_SHA=$(echo $MERGE_RESPONSE | jq '.merge_commit_sha // empty')
         echo "Merge commit SHA: $MERGE_SHA"
 
         echo "MERGED_TO_BRANCH=$TARGET_BRANCH" >> merge_result.env
         echo "MERGE_COMMIT_SHA=$MERGE_SHA" >> merge_result.env
         echo "MERGED_MR_IID=$MR_IID" >> merge_result.env
+
     else
         echo "Failed to merge. Response: $MERGE_RESPONSE"
         exit 1
