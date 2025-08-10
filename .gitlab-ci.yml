@@ -16,59 +16,115 @@ variables:
   KEYCLOAK_IMAGE: bitnami/keycloak:26.3.1-debian-12-r2
   REDIS_IMAGE: bitnami/redis:8.0.3-debian-12-r2
 
-.rules_changes: &changes
-  changes:
-    - "**/*.java"
-    - "build.gradle.kts"
-    - "gradle.properties.kts"
-    - "src/**/*"
-
-.ssh_setup: &ssh_setup
-  before_script:
-    - apk add --no-cache openssh
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
-    - ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
-
+# Define stages
 stages:
   - test
+  - merge
   - docker-publish
   - backup
   - deploy
   - cleanup
 
-unit-tests:
-  stage: test
-  image: gradle:${GRADLE_VERSION}
+#define rules
+.rules_changes: &changes
+  changes:
+    - "**/*.java"
+    - "build.gradle.kts"
+    - "setting.gradle.kts"
+    - "src/**/*"
+
+.exclude_schedule: &exclude_schedule
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+
+.rules_feat_fix_hotfix_main_dev: &rules_feat_fix_hotfix_main_dev
   rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/'
+    - *exclude_schedule
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
       <<: *changes
-      when: always
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      <<: *changes
+      when: on_success
+    - when: never
+
+.rules_feat_fix_hotfix: &rules_feat_fix_hotfix
+  rules:
+    - *exclude_schedule
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
+      <<: *changes
+      when: on_success
+    - when: never
+
+.rules_feat_fix: &rules_feat_fix
+    rules:
+    - *exclude_schedule
+    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix)\/.+/'
+      <<: *changes
+      when: on_success
+    - when: never
+
+.rules_hotfix: &rules_hotfix
+  rules:
+    - *exclude_schedule
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\/.+/'
+      <<: *changes
+      when: on_success
+    - when: never
+
+.rules_main_dev: &rules_main_dev
+  rules:
+    - *exclude_schedule
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
       <<: *changes
       when: always
-  except: 
-  script:
-    - gradle clean unitTest --no-daemon --stacktrace --info
+    - when: never
+
+.rules_main_only: &rules_main_only
+  rules:
+    - *exclude_schedule
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      <<: *changes
+      when: on_success
+    - when: never
+
+.rules_dev_only: &rules_dev_only
+  rules:
+    - *exclude_schedule
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      <<: *changes
+      when: on_success
+    - when: never
+
+.rules_schedule_only: &rules_schedule_only
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: never
+
+# define templates
+.ssh_commands: &ssh_commands
+  - apk add --no-cache openssh
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+  - chmod 600 ~/.ssh/id_rsa
+  - ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+  - chmod 644 ~/.ssh/known_hosts
+
+.ssh_setup: &ssh_setup
+  before_script:
+    - *ssh_commands
+
+.test_artifacts: &test_artifacts
   artifacts:
     when: always
+    expire_in: 1 week
     reports:
       junit:
-        - build/test-results/unitTest/TEST-*.xml
-    paths:
-      - build/
-      - .gradle/
-    expire_in: 1 week
+        - build/test-results/*/TEST-*.xml
 
-integration-tests:
-  stage: test
-  image: gradle:${GRADLE_VERSION}
-  needs:
-    - job: "unit-tests"
-      artifacts: true
+.docker_config: &docker_config
   services:
     - name: docker:${DOCKER_VERSION}-dind
       alias: docker
@@ -77,43 +133,59 @@ integration-tests:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
     DOCKER_DRIVER: overlay2
+
+.backup_config: &backup_config
+  stage: backup
+  image: alpine:${ALPINE_VERSION}
+  <<: *rules_main_only
+  needs:
+    - job: build-and-push-image
+      artifacts: false
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+  <<: *ssh_setup
+
+# Define jobs
+unit-tests:
+  stage: test
+  image: gradle:${GRADLE_VERSION}
+  <<: *rules_feat_fix_hotfix_main_dev
+  script:
+    - gradle clean unitTest --no-daemon --stacktrace --info
+  <<: *test_artifacts
+  artifacts:
+    paths:
+      - build/jacoco/unitTest.exec
+      - build/test-results/unitTest/
+      - build/reports/tests/unitTest
+
+integration-tests:
+  stage: test
+  image: gradle:${GRADLE_VERSION}
+  <<: *docker_config
+  variables:
     TESTCONTAINERS_HOST_OVERRIDE: docker
     TESTCONTAINERS_RYUK_DISABLED: "true"
     TESTCONTAINERS_CHECKS_DISABLE: "true"
     GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/'
-      <<: *changes
-      when: always
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
-      <<: *changes
-      when: always
-    - when: never
+  <<: *rules_feat_fix_hotfix_main_dev
   before_script:
-    - apk add --no-cache docker-cli curl
-    - until docker info; do echo "Waiting for docker to start..."; sleep 1; done
-    - docker version
-    - gradle --version
-    - docker system prune -f || true
-    - docker pull $POSTGRES_IMAGE
-    - docker pull $REDIS_IMAGE
-    - docker pull $KEYCLOAK_IMAGE
-    - echo "$ENV_FILE" > .env
-    - export $(cat .env | xargs)
+    - chmod +x scripts/integration-test-setup.sh
+    - ./scripts/integration-test-setup.sh
   script:
     - gradle integrationTest --no-daemon --stacktrace --info
   after_script:
-    - docker container prune -f || true
-    - docker image prune -f || true
+    - chmod +x scripts/docker-cleanup.sh
+    - ./scripts/docker-cleanup.sh
+  <<: *test_artifacts
   artifacts:
-    when: always
-    reports:
-      junit:
-        - build/test-results/integrationTest/TEST-*.xml
     paths:
-      - build/
-      - .gradle/
-    expire_in: 1 week
+      - build/jacoco/integrationTest.exec
+      - build/test-results/integrationTest/
+      - build/reports/tests/integrationTest/
   retry:
     max: 2
     when:
@@ -124,169 +196,130 @@ generate_report:
   stage: test
   image: gradle:${GRADLE_VERSION}
   needs:
+    - job: "unit-tests"
+      artifacts: true
     - job: "integration-tests"
       artifacts: true
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix|test)\/.+/'
-      <<: *changes
-      when: always
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
-      <<: *changes
-      when: always
-    - when: never  
+  <<: *rules_feat_fix_hotfix_main_dev
+  script:
+    - gradle jacocoCombinedTestReport --no-daemon --stacktrace --info
+  artifacts:
+    when: always
+    paths:
+      - build/reports/jacoco/combined
+      - build/reports/jacoco/jacocoCombinedTestReport
+    expire_in: 1 week
+
+push-report:
+  stage: test
+  image: gradle:${GRADLE_VERSION}
+  needs:
+    - job: "generate_report"
+      artifacts: true
+  <<: *rules_dev_only
   before_script:
     - echo "$SONAR_TOKEN"
   script:
-    - gradle jacocoCombinedTestReport --no-daemon --stacktrace --info
     - gradle sonar
 
-build-and-push-image:
-  stage: docker-publish  
-  image: docker:${DOCKER_VERSION}
-  services:
-    - docker:${DOCKER_VERSION}-dind
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|doc|hotfix)\/.+/'
-      <<: *changes
-      when: on_success
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
-      <<: *changes
-      when: on_success
-    - when: never
+create_merge_dev:
+  stage: merge
+  image: alpine:${ALPINE_VERSION}
   needs:
     - job: "unit-tests"
       artifacts: false
     - job: "integration-tests"
       artifacts: false
+  <<: *rules_feat_fix
+  before_script:
+    - apk add --no-cache curl jq
+    - chmod +x scripts/create-merge-request.sh
   script:
-      - set -e
-      - docker buildx build --platform linux/amd64 -t $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA .
-      - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
-      - |
-        if [[ "$CI_COMMIT_REF_NAME" == "dev" || "$CI_COMMIT_REF_NAME" == "main" ]]; then
-          docker tag $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA $DOCKER_IMAGE:$CI_COMMIT_REF_NAME
-          docker push $DOCKER_IMAGE:$CI_COMMIT_REF_NAME
-        fi
-      - docker push $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
+    - ./scripts/create-merge-request.sh "dev"
+  artifacts:
+    reports:
+      dotenv: merge_request_dev.env
+    expire_in: 1 hour
+
+create_merge_main:
+  stage: merge
+  image: alpine:${ALPINE_VERSION}
+  needs:
+    - job: "unit-tests"
+      artifacts: false
+    - job: "integration-tests"
+      artifacts: false
+  <<: *rules_hotfix
+  before_script:
+    - apk add --no-cache curl jq
+    - chmod +x scripts/create-merge-request.sh
+  script:
+    - ./scripts/create-merge-request.sh "main"
+  artifacts:
+    reports:
+      dotenv: merge_request_main.env
+    expire_in: 1 hour
+
+approve_merge_request:
+  stage: merge
+  image: alpine:${ALPINE_VERSION}
+  <<: *rules_feat_fix_hotfix
+  needs:
+    - job: "create_merge_dev"
+      artifacts: true
+      optional: true
+    - job: "create_merge_main"
+      artifacts: true
+      optional: true
+  before_script:
+    - apk add --no-cache curl jq
+    - chmod +x scripts/approve-merge-request.sh
+  script:
+    - ./scripts/approve-merge-request.sh
+
+build-and-push-image:
+  stage: docker-publish
+  image: docker:${DOCKER_VERSION}
+  <<: *docker_config
+  <<: *rules_main_dev
+  needs:
+    - job: "unit-tests"
+      artifacts: false
+    - job: "integration-tests"
+      artifacts: false
+  before_script:
+    - chmod +x scripts/build-and-push-image.sh
+  script:
+    - ./scripts/build-and-push-image.sh
 
 backup_app_db:
-  stage: backup
-  image: alpine:${ALPINE_VERSION}
-  parallel:
-    matrix:
-      - BACKUP_TYPE: "app_db"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      <<: *changes
-      when: on_success
-    - when: never
-  needs:
-    - job: build-and-push-image
-      artifacts: false
-  retry:
-    max: 2
-    when:
-      - runner_system_failure
-      - stuck_or_timeout_failure
-  <<: *ssh_setup
+  <<: *backup_config
+  before_script:
+    - *ssh_commands
+    - chmod +x scripts/backup-database.sh
   script:
-    - set -e
-    - |
-      ssh $USER@$HOST << EOF
-        set -e
-        mkdir -p "$BACKUPS_DIR/database/$APP_DB_NAME"
-        cd $PROJECT_DIR/script
-        ./pg_tool.sh backup -c $APP_DB_CONTAINER -n $APP_DB_NAME -u $APP_DB_USER -p $APP_DB_PASS -f $CI_COMMIT_SHORT_SHA --backup-dir $BACKUPS_DIR/database/$APP_DB_NAME
-        echo "=== API Database Backup Info ==="
-        cat $BACKUPS_DIR/database/$APP_DB_NAME/$CI_COMMIT_SHORT_SHA-*.info || echo "No API backup info found"
-      EOF
+    - ./scripts/backup-database.sh "$APP_DB_CONTAINER" "$APP_DB_NAME" "$APP_DB_USER" "$APP_DB_PASS"
 
 backup_keycloak_db:
-  stage: backup
-  image: alpine:${ALPINE_VERSION}
-  parallel:
-    matrix:
-      - BACKUP_TYPE: "keycloak_db"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      <<: *changes
-      when: on_success
-    - when: never
-  needs:
-    - job: build-and-push-image
-      artifacts: false
-  retry:
-    max: 2
-    when:
-      - runner_system_failure
-      - stuck_or_timeout_failure
-  <<: *ssh_setup
+  <<: *backup_config
+  before_script:
+    - *ssh_commands
+    - chmod +x scripts/backup-database.sh
   script:
-    - set -e
-    - |
-      ssh $USER@$HOST << EOF
-        set -e
-        mkdir -p "$BACKUPS_DIR/database/$KEYCLOAK_DB_NAME"
-        cd $PROJECT_DIR/script
-        ./pg_tool.sh backup -c $KEYCLOAK_DB_CONTAINER -n $KEYCLOAK_DB_NAME -u $KEYCLOAK_DB_USER -p $KEYCLOAK_DB_PASS -f $CI_COMMIT_SHORT_SHA --backup-dir $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME
-        echo "=== Keycloak Database Backup Info ==="
-        cat $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$CI_COMMIT_SHORT_SHA-*.info || echo "No Keycloak backup info found"
-      EOF
+    - ./scripts/backup-database.sh "$KEYCLOAK_DB_CONTAINER" "$KEYCLOAK_DB_NAME" "$KEYCLOAK_DB_USER" "$KEYCLOAK_DB_PASS"
 
 backup_transitlink_data:
-  stage: backup
-  image: alpine:${ALPINE_VERSION}
-  parallel:
-    matrix:
-      - BACKUP_TYPE: "transitlink_data"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      <<: *changes
-      when: on_success
-    - when: never
-  needs:
-    - job: build-and-push-image
-      artifacts: false
-  retry:
-    max: 2
-    when:
-      - runner_system_failure
-      - stuck_or_timeout_failure
-  <<: *ssh_setup
+  <<: *backup_config
+  before_script:
+    - *ssh_commands
+    - chmod +x scripts/backup-transitlink-data.sh
   script:
-    - set -e
-    - |
-      ssh $USER@$HOST << EOF
-        set -e
-        mkdir -p "$BACKUPS_DIR/transitlink"
-        TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
-        echo "Backing up entire transitlink directory..."
-        tar -czf $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz -C $PROJECT_DIR transitlink/
-        echo "Transitlink backup: $CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz
-        Source: $PROJECT_DIR/transitlink/
-        Size: \$(du -sh $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.tar.gz | cut -f1)
-        Total files: \$(find $PROJECT_DIR/transitlink -type f 2>/dev/null | wc -l)
-        Total dirs: \$(find $PROJECT_DIR/transitlink -type d 2>/dev/null | wc -l)
-        Commit: $CI_COMMIT_SHORT_SHA
-        Branch: $CI_COMMIT_REF_NAME
-        Date: \$(date)
-        Contents:
-        \$(ls -la $PROJECT_DIR/transitlink/)" > $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-\$TIMESTAMP.info
-        echo "=== Transitlink Directory Backup ==="
-        cat $BACKUPS_DIR/transitlink/$CI_COMMIT_SHORT_SHA-transitlink-*.info 2>/dev/null || echo "No transitlink backup info found"
-      EOF
+    - ./scripts/backup-transitlink-data.sh
 
 deploy:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      <<: *changes
-      when: on_success
-    - when: never
+  <<: *rules_main_only
   needs:
     - job: backup_app_db
       artifacts: false
@@ -294,174 +327,30 @@ deploy:
       artifacts: false
     - job: backup_transitlink_data
       artifacts: false
-  <<: *ssh_setup
+  before_script:
+    - *ssh_commands
+    - chmod +x scripts/deploy.sh
   script:
-    - ssh $USER@$HOST "mkdir -p $BACKUPS_DIR/api"
-    - set -e
-    - |
-      cat > compose.api.yaml << EOF
-      services:
-        transitlink:
-          image: $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
-      EOF
-    - scp compose.api.yaml $USER@$HOST:$BACKUPS_DIR/api/api-$CI_COMMIT_SHORT_SHA.yaml
-    - |
-      ssh $USER@$HOST << EOF
-        set -e
-        cd $PROJECT_DIR
-        ln -sf $BACKUPS_DIR/api/api-$CI_COMMIT_SHORT_SHA.yaml compose.api.yaml
-        docker compose -f compose.yaml -f compose.prod.yaml -f compose.api.yaml -f compose.web.yaml --env-file .env.prod down || true
-        docker compose -f compose.yaml -f compose.prod.yaml -f compose.api.yaml -f compose.web.yaml --env-file .env.prod up -d
-        echo "Waiting for service to be ready..."
-        timeout 300 sh -c 'until curl -f http://localhost/actuator/health; do echo "Waiting..."; sleep 5; done' || echo "Health check timeout - please verify manually"
-        echo "deployment completed successfully!"
-        echo "Deployed version: $CI_COMMIT_SHORT_SHA"
-        echo "Current override: \$(readlink compose.api.yaml)"
-      EOF
+    - ./scripts/deploy.sh
 
 rollback:
   stage: deploy
   image: alpine:${ALPINE_VERSION}
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      <<: *changes
-      when: manual
-    - when: never
+  <<: *rules_main_only
   variables:
     ROLLBACK_TAG: ""
-  <<: *ssh_setup
+  before_script:
+    - *ssh_commands
+    - chmod +x scripts/rollback.sh
   script:
-    - |
-      if [ -z "$ROLLBACK_TAG" ]; then
-        echo "ERROR: ROLLBACK_TAG variable is required"
-        echo "Usage: Set ROLLBACK_TAG to commit SHA you want to rollback to"
-        exit 1
-      fi
-      ssh $USER@$HOST << EOF
-        set -e
-        echo "=== Starting Rollback to $ROLLBACK_TAG ==="
-        echo "Checking backup files..."
-        BACKUP_ERRORS=0
-        if [ ! -f "$BACKUPS_DIR/database/$APP_DB_NAME/$ROLLBACK_TAG-"*.dump ]; then
-          echo "ERROR: Database backup for $APP_DB_NAME with tag $ROLLBACK_TAG not found!"
-          ls -la $BACKUPS_DIR/database/$APP_DB_NAME/$ROLLBACK_TAG-* 2>/dev/null || echo "No backups found for this tag"
-          BACKUP_ERRORS=\$((BACKUP_ERRORS + 1))
-        fi
-        if [ ! -f "$BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$ROLLBACK_TAG-"*.dump ]; then
-          echo "ERROR: Database backup for $KEYCLOAK_DB_NAME with tag $ROLLBACK_TAG not found!"
-          ls -la $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$ROLLBACK_TAG-* 2>/dev/null || echo "No backups found for this tag"
-          BACKUP_ERRORS=\$((BACKUP_ERRORS + 1))
-        fi
-        if [ ! -f "$BACKUPS_DIR/transitlink/$ROLLBACK_TAG-transitlink-"*.tar.gz ]; then
-          echo "ERROR: Transitlink data backup with tag $ROLLBACK_TAG not found!"
-          ls -la $BACKUPS_DIR/transitlink/$ROLLBACK_TAG-* 2>/dev/null || echo "No backups found for this tag"
-          BACKUP_ERRORS=\$((BACKUP_ERRORS + 1))
-        fi
-        if [ ! -f "$BACKUPS_DIR/api/api-$ROLLBACK_TAG.yaml" ]; then
-          echo "ERROR: Compose file api-$ROLLBACK_TAG.yaml not found!"
-          ls -la $BACKUPS_DIR/api/api-*.yaml 2>/dev/null || echo "No compose backups found"
-          BACKUP_ERRORS=\$((BACKUP_ERRORS + 1))
-        fi
-        if [ \$BACKUP_ERRORS -gt 0 ]; then
-          echo "Found \$BACKUP_ERRORS errors. Aborting rollback."
-          exit 1
-        fi
-        echo "All backup files found. Proceeding with rollback..."
-        echo "=== Restoring Databases ==="
-        cd $PROJECT_DIR/script
-        APP_DB_BACKUP=\$(ls -t $BACKUPS_DIR/database/$APP_DB_NAME/$ROLLBACK_TAG-*.dump | head -1)
-        KEYCLOAK_DB_BACKUP=\$(ls -t $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$ROLLBACK_TAG-*.dump | head -1)
-        echo "Restoring $APP_DB_NAME database..."
-        ./pg_tool.sh restore "\$APP_DB_BACKUP" \
-          -c $APP_DB_CONTAINER \
-          -n $APP_DB_NAME \
-          -u $APP_DB_USER \
-          -p $APP_DB_PASS \
-          -s $APP_CONTAINER \
-          --backup-dir $BACKUPS_DIR/database/$APP_DB_NAME
-          -y -d
-        echo "Restoring $KEYCLOAK_DB_NAME database..."  
-        ./pg_tool.sh restore "\$KEYCLOAK_DB_BACKUP" \
-          -c $KEYCLOAK_DB_CONTAINER \
-          -n $KEYCLOAK_DB_NAME \
-          -u $KEYCLOAK_DB_USER \
-          -p $KEYCLOAK_DB_PASS \
-          -s $KEYCLOAK_CONTAINER \
-          --backup-dir $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME
-          -y -d
-        echo "=== Restoring Transitlink Data ==="
-        TRANSITLINK_BACKUP=\$(ls -t $BACKUPS_DIR/transitlink/$ROLLBACK_TAG-transitlink-*.tar.gz | head -1)
-        echo "Extracting transitlink data from backup..."
-        tar -xzvf "\$TRANSITLINK_BACKUP" -C $PROJECT_DIR
-        echo "=== Updating Compose Configuration ==="
-        cd $PROJECT_DIR
-        ln -sf $BACKUPS_DIR/api/api-$ROLLBACK_TAG.yaml compose.api.yaml
-        echo "=== Starting Applications ==="
-        docker compose -f compose.yaml -f compose.prod.yaml -f compose.api.yaml --env-file .env.prod up -d
-        echo "Waiting for services to start..."
-        sleep 10
-        echo "=== Health Check ==="
-        echo "Checking database connections..."
-        docker exec $APP_DB_CONTAINER pg_isready -U $APP_DB_USER -d $APP_DB_NAME || echo "Warning: App DB not ready"
-        docker exec $KEYCLOAK_DB_CONTAINER pg_isready -U $KEYCLOAK_DB_USER -d $KEYCLOAK_DB_NAME || echo "Warning: Keycloak DB not ready"
-        echo "Checking container status..."
-        docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-        echo "=== Rollback Summary ==="
-        echo "Target Tag: $ROLLBACK_TAG"
-        echo "App DB restored from: \$(basename "\$APP_DB_BACKUP")"
-        echo "Keycloak DB restored from: \$(basename "\$KEYCLOAK_DB_BACKUP")"
-        echo "Transitlink data restored from: \$(basename "\$TRANSITLINK_BACKUP")"
-        echo "Compose file: api-$ROLLBACK_TAG.yaml"
-        echo "Completed at: \$(date)"
-        echo ""
-        echo "=== Restored Backup Details ==="
-        cat $BACKUPS_DIR/database/$APP_DB_NAME/$ROLLBACK_TAG-*.info 2>/dev/null || echo "No app DB backup info"
-        echo ""
-        cat $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/$ROLLBACK_TAG-*.info 2>/dev/null || echo "No keycloak DB backup info"
-        echo ""
-        cat $BACKUPS_DIR/transitlink/$ROLLBACK_TAG-transitlink-*.info 2>/dev/null || echo "No transitlink backup info"
-        echo "=== Rollback to $ROLLBACK_TAG completed successfully! ==="
-      EOF
+    - ./scripts/rollback.sh "$ROLLBACK_TAG"
 
 cleanup_backups:
   stage: cleanup
   image: alpine:${ALPINE_VERSION}
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: always
-    - when: never
-  <<: *ssh_setup
+  <<: *rules_schedule_only
+  before_script:
+    - *ssh_commands
+    - chmod +x scripts/cleanup-backups.sh
   script:
-    - |
-      ssh $USER@$HOST << EOF
-        set -e
-        echo "=== Cleaning up old backups ==="
-        echo "Cleaning $APP_DB_NAME backups..."
-        # Keep 5 newest .dump, .info, .sql.gz files
-        ls -t $BACKUPS_DIR/database/$APP_DB_NAME/*.dump 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        ls -t $BACKUPS_DIR/database/$APP_DB_NAME/*.info 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        ls -t $BACKUPS_DIR/database/$APP_DB_NAME/*.sql.gz 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        
-        echo "Cleaning $KEYCLOAK_DB_NAME backups..."
-        ls -t $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/*.dump 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        ls -t $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/*.info 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        ls -t $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/*.sql.gz 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        
-        echo "Cleaning transitlink data backups..."
-        ls -t $BACKUPS_DIR/transitlink/*.tar.gz 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        ls -t $BACKUPS_DIR/transitlink/*.info 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        
-        echo "Cleaning API compose files..."
-        ls -t $BACKUPS_DIR/api/api-*.yaml 2>/dev/null | tail -n +6 | xargs -I {} rm -f {}
-        
-        echo "=== Cleanup Summary ==="
-        echo "Remaining $APP_DB_NAME backups:"
-        ls -l $BACKUPS_DIR/database/$APP_DB_NAME/ 2>/dev/null || echo "No backups found"
-        echo "Remaining $KEYCLOAK_DB_NAME backups:"
-        ls -l $BACKUPS_DIR/database/$KEYCLOAK_DB_NAME/ 2>/dev/null || echo "No backups found"
-        echo "Remaining transitlink backups:"
-        ls -l $BACKUPS_DIR/transitlink/ 2>/dev/null || echo "No backups found"
-        echo "Remaining API compose files:"
-        ls -l $BACKUPS_DIR/api/api-*.yaml 2>/dev/null || echo "No compose files found"
-        echo "Cleanup completed at: \$(date)"
-      EOF
+    - ./scripts/cleanup-backups.sh
