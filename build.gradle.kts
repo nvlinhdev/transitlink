@@ -28,9 +28,11 @@ sonar {
     properties {
         property("sonar.projectKey", "sep490_g80_transit-link-backend")
         property("sonar.organization", "sep490-g80")
-        property ("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.host.url", "https://sonarcloud.io")
         property("sonar.coverage.jacoco.xmlReportPaths",
-            layout.buildDirectory.file("reports/jacoco/jacocoCombinedTestReport/jacocoCombinedTestReport.xml").get().asFile.absolutePath)
+            layout.buildDirectory.file("reports/jacoco/jacocoCombinedTestReport/jacocoCombinedTestReport.xml")
+                .get().asFile.absolutePath
+        )
     }
 }
 
@@ -61,6 +63,10 @@ sourceSets {
         runtimeClasspath += output + compileClasspath
     }
 }
+val openApiVersion = "2.8.9"
+val mapstructVersion = "1.6.3"
+val firebaseAdminVersion = "9.5.0"
+val mapstructLombokBindingVersion = "0.2.0"
 
 dependencies {
     // Spring Boot Starters
@@ -71,31 +77,25 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-
     // Spring Modulith
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jpa")
-
     // OpenAPI
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
-
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openApiVersion")
+    // firebase-admin
+    implementation("com.google.firebase:firebase-admin:${firebaseAdminVersion}")
+    // MapStruct for object mapping
+    implementation("org.mapstruct:mapstruct:${mapstructVersion}")
     // PostgreSQL driver
     runtimeOnly("org.postgresql:postgresql")
-
     // Devtools for hot reload (development only)
     developmentOnly("org.springframework.boot:spring-boot-devtools")
-
     // Lombok (for annotations like @Getter, @Builder, etc.)
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
-
-    // MapStruct for object mapping
-    implementation("org.mapstruct:mapstruct:1.6.3")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
-    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
-
-    // firebase-admin
-    implementation("com.google.firebase:firebase-admin:9.5.0")
+    // MapStruct Lombok binding for better integration with Lombok
+    annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
+    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:$mapstructLombokBindingVersion")
 
     val sharedTestDeps = listOf(
         "org.springframework.boot:spring-boot-starter-test",
@@ -123,8 +123,15 @@ tasks {
         group = "verification"
         testClassesDirs = sourceSets["unitTest"].output.classesDirs
         classpath = sourceSets["unitTest"].runtimeClasspath
-        ignoreFailures = true
+        ignoreFailures = false // Continue running tests even if some fail Or throw exceptions
         useJUnitPlatform()
+
+        outputs.upToDateWhen {
+            // Check if jacoco exec file exists and is newer than source files
+            val execFile = layout.buildDirectory.file("jacoco/unitTest.exec").get().asFile
+            execFile.exists() &&
+                    execFile.lastModified() > sourceSets["main"].allSource.files.maxOfOrNull { it.lastModified() } ?: 0
+        }
 
         // JaCoCo configuration for unit tests
         extensions.configure(JacocoTaskExtension::class) {
@@ -154,9 +161,15 @@ tasks {
         group = "verification"
         testClassesDirs = sourceSets["integrationTest"].output.classesDirs
         classpath = sourceSets["integrationTest"].runtimeClasspath
-        ignoreFailures = true
+        ignoreFailures = false // Continue running tests even if some fail Or throw exceptions
         useJUnitPlatform()
         shouldRunAfter(unitTest)
+
+        outputs.upToDateWhen {
+            val execFile = layout.buildDirectory.file("jacoco/integrationTest.exec").get().asFile
+            execFile.exists() &&
+                    execFile.lastModified() > sourceSets["main"].allSource.files.maxOfOrNull { it.lastModified() } ?: 0
+        }
 
         // JaCoCo configuration for integration tests
         extensions.configure(JacocoTaskExtension::class) {
@@ -219,8 +232,21 @@ tasks {
         description = "Generate combined JaCoCo coverage report"
         group = "reporting"
 
-        dependsOn(unitTest, integrationTest)
-        executionData(unitTest.get(), integrationTest.get())
+        doFirst {
+            val unitExec = layout.buildDirectory.file("jacoco/unitTest.exec").get().asFile
+            val integExec = layout.buildDirectory.file("jacoco/integrationTest.exec").get().asFile
+
+            if (!unitExec.exists() || !integExec.exists()) {
+                throw GradleException("""
+                    |JaCoCo execution files not found. Please run tests first:
+                    |  ./gradlew unitTest integrationTest jacocoCombinedTestReport
+                """.trimMargin())
+            }
+        }
+
+        executionData.from(
+            fileTree(layout.buildDirectory.dir("jacoco")).include("unitTest.exec", "integrationTest.exec")
+        )
         sourceSets(sourceSets["main"])
 
         reports {
@@ -257,7 +283,7 @@ tasks {
                     value = "COVEREDRATIO"
                     minimum = "0.8".toBigDecimal()
                 }
-                isFailOnViolation = false // Set to false to allow builds to pass even if coverage is below thresholds
+                isFailOnViolation = true // Set to false to allow builds to pass even if coverage is below thresholds
             }
         }
     }
@@ -288,7 +314,7 @@ tasks {
                     value = "COVEREDRATIO"
                     minimum = "0.6".toBigDecimal()
                 }
-                isFailOnViolation = false // Set to false to allow builds to pass even if coverage is below thresholds
+                isFailOnViolation = true // Set to false to allow builds to pass even if coverage is below thresholds
             }
 
         }
@@ -299,21 +325,13 @@ tasks {
         enabled = false
     }
 
-    // Configure unit test reporting
-    unitTest {
-        finalizedBy(jacocoUnitTestReport)
-    }
-
-    jacocoUnitTestReport {
+    // Configure check task to run unit test coverage verification
+    unitTest() {
         finalizedBy(jacocoUnitTestCoverageVerification)
     }
 
-    // Configure integration test reporting
-    integrationTest {
-        finalizedBy(jacocoIntegrationTestReport)
-    }
-
-    jacocoIntegrationTestReport {
+    // Configure check task to run integration test coverage verification
+    integrationTest() {
         finalizedBy(jacocoIntegrationTestCoverageVerification)
     }
 
