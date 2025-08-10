@@ -173,6 +173,8 @@ integration-tests:
     GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
   <<: *rules_feat_fix_hotfix_main_dev
   before_script:
+    - apk add --no-cache dos2unix
+    - find scripts/ -type f -exec dos2unix {} +
     - chmod +x scripts/integration-test-setup.sh
     - ./scripts/integration-test-setup.sh
   script:
