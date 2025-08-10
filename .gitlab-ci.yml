@@ -228,7 +228,9 @@ create_merge_dev:
   image: curlimages/curl:$CURL_VERSION
   needs:
     - job: "unit-tests"
+      artifacts: false
     - job: "integration-tests"
+      artifacts: false
   <<: *rules_feat_fix
   before_script:
     - apk add --no-cache jq
@@ -245,7 +247,9 @@ create_merge_main:
   image: curlimages/curl:$CURL_VERSION
   needs:
     - job: "unit-tests"
+      artifacts: false
     - job: "integration-tests"
+      artifacts: false
   <<: *rules_hotfix
   before_script:
     - apk add --no-cache jq
