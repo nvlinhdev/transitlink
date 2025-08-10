@@ -72,7 +72,6 @@ public class ProfileServiceImpl implements ProfileService {
             long authTime = extractAuthTime(token);
             validateAuthTime(authTime);
 
-            System.out.println("Auth time: " + authTime + ", Current time: " + Instant.now().getEpochSecond());
             String phoneNumber = (String) token.getClaims().get("phone_number");
             if (phoneNumber == null) {
                 throw new BusinessException(ProfileErrorCode.PHONE_NUMBER_NOT_IN_TOKEN);
