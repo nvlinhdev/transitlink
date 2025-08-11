@@ -127,13 +127,8 @@ stages:
         - build/test-results/*/TEST-*.xml
 
 .docker_config: &docker_config
-  services:
-    - name: docker:${DOCKER_VERSION}-dind
-      alias: docker
-      command: ["--tls=false"]
   variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: unix:///var/run/docker.sock
     DOCKER_DRIVER: overlay2
 
 .backup_config: &backup_config
@@ -169,7 +164,7 @@ integration-tests:
   image: docker:${DOCKER_VERSION}
   <<: *docker_config
   variables:
-    TESTCONTAINERS_HOST_OVERRIDE: docker
+    TESTCONTAINERS_HOST_OVERRIDE: 172.17.0.1
     TESTCONTAINERS_RYUK_DISABLED: "true"
     TESTCONTAINERS_CHECKS_DISABLE: "true"
     GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
