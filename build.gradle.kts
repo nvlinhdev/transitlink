@@ -101,7 +101,15 @@ dependencies {
         "org.springframework.boot:spring-boot-starter-test",
         "org.springframework.modulith:spring-modulith-starter-test",
         "org.springframework.security:spring-security-test",
-        "org.junit.platform:junit-platform-launcher"
+        "org.junit.platform:junit-platform-launcher",
+
+        "org.testcontainers:testcontainers:1.20.1",
+        "org.testcontainers:junit-jupiter:1.20.1",
+
+        "org.springframework.boot:spring-boot-testcontainers:3.3.3",
+        "org.postgresql:postgresql:42.7.3"
+
+
     )
 
     sharedTestDeps.forEach {
