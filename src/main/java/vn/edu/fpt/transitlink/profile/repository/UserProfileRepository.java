@@ -7,6 +7,7 @@ import vn.edu.fpt.transitlink.profile.entity.UserProfile;
 import vn.edu.fpt.transitlink.shared.base.SoftDeletableRepository;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface UserProfileRepository extends SoftDeletableRepository<UserProfile, UUID> {
@@ -17,4 +18,6 @@ public interface UserProfileRepository extends SoftDeletableRepository<UserProfi
     @Transactional
     @Query("DELETE FROM UserProfile u WHERE u.deleted = true AND u.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
+
+    Optional<UserProfile> findByAccountId(UUID accountId);
 }

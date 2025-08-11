@@ -1,0 +1,28 @@
+# Custom Docker image với Java 21, Gradle và các tools cần thiết
+FROM docker:28.3.3
+LABEL maintainer="transitlink-team" \
+      description="Docker with Java 21, Gradle 8.14.3, bash, curl and test tools for integration testing"
+
+# Install packages và Gradle trong một layer duy nhất để giảm image size
+RUN apk add --no-cache \
+    bash \
+    openjdk21 \
+    curl \
+    git \
+    ca-certificates \
+    wget \
+    unzip \
+    && GRADLE_VERSION=8.14.3 \
+    && wget -q "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -O /tmp/gradle.zip \
+    && unzip -q /tmp/gradle.zip -d /opt \
+    && mv "/opt/gradle-${GRADLE_VERSION}" /opt/gradle \
+    && rm -rf /tmp/gradle.zip /var/cache/apk/* \
+    && apk del wget unzip
+
+# Set environment variables
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk \
+    GRADLE_HOME=/opt/gradle \
+    PATH="/usr/lib/jvm/java-21-openjdk/bin:/opt/gradle/bin:$PATH"
+
+WORKDIR /workspace
+CMD ["/bin/bash"]

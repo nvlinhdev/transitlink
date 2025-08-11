@@ -1,0 +1,16 @@
+# Custom Docker image với bash cho build and push operations
+FROM docker:28.3.3
+
+LABEL maintainer="transitlink-team"
+LABEL description="Docker with bash for build and push operations"
+
+# Install bash and essential tools
+RUN apk add --no-cache \
+    bash \
+    git \
+    ca-certificates \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /workspace
+
+CMD ["/bin/bash"]

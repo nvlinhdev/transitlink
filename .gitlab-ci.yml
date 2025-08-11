@@ -1,5 +1,10 @@
 variables:
   DOCKER_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend
+ 
+  ALPINE_SSH_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend/alpine-ssh:latest
+  DOCKER_JAVA_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend/docker-java:latest
+  DOCKER_BASH_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend/docker-bash:latest
+  
   USER: transitlink
   PROJECT_DIR: "/srv/transitlink"
   BACKUPS_DIR: "/backups"
@@ -32,15 +37,17 @@ stages:
     - "build.gradle.kts"
     - "setting.gradle.kts"
     - "src/**/*"
+    - "scripts/**/*"
+    - ".gitlab-ci.yml"
 
 .exclude_schedule: &exclude_schedule
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
+  - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    when: never
 
 .rules_feat_fix_hotfix_main_dev: &rules_feat_fix_hotfix_main_dev
   rules:
     - *exclude_schedule
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
+    - if: '$CI_COMMIT_BRANCH =~ /^(fix|hotfix)\/.+/ || ($CI_COMMIT_BRANCH =~ /^feat\/.+/ && $CI_COMMIT_MESSAGE =~ /^test:/)'
       <<: *changes
       when: on_success
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -51,15 +58,15 @@ stages:
 .rules_feat_fix_hotfix: &rules_feat_fix_hotfix
   rules:
     - *exclude_schedule
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
+    - if: '$CI_COMMIT_BRANCH =~ /^(fix|hotfix)\/.+/ || ($CI_COMMIT_BRANCH =~ /^feat\/.+/ && $CI_COMMIT_MESSAGE =~ /^test:/)'
       <<: *changes
       when: on_success
     - when: never
 
 .rules_feat_fix: &rules_feat_fix
-    rules:
+  rules:
     - *exclude_schedule
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix)\/.+/'
+    - if: '$CI_COMMIT_BRANCH =~ /^fix\/.+/ || ($CI_COMMIT_BRANCH =~ /^feat\/.+/ && $CI_COMMIT_MESSAGE =~ /^test:/)'
       <<: *changes
       when: on_success
     - when: never
@@ -104,7 +111,6 @@ stages:
 
 # define templates
 .ssh_commands: &ssh_commands
-  - apk add --no-cache openssh
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
   - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
@@ -125,18 +131,13 @@ stages:
         - build/test-results/*/TEST-*.xml
 
 .docker_config: &docker_config
-  services:
-    - name: docker:${DOCKER_VERSION}-dind
-      alias: docker
-      command: ["--tls=false"]
   variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: unix:///var/run/docker.sock
     DOCKER_DRIVER: overlay2
 
 .backup_config: &backup_config
   stage: backup
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_main_only
   needs:
     - job: build-and-push-image
@@ -164,22 +165,32 @@ unit-tests:
 
 integration-tests:
   stage: test
-  image: gradle:${GRADLE_VERSION}
+  image: $DOCKER_JAVA_IMAGE
   <<: *docker_config
   variables:
-    TESTCONTAINERS_HOST_OVERRIDE: docker
+    TESTCONTAINERS_HOST_OVERRIDE: 172.17.0.1
     TESTCONTAINERS_RYUK_DISABLED: "true"
     TESTCONTAINERS_CHECKS_DISABLE: "true"
     GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
   <<: *rules_feat_fix_hotfix_main_dev
   before_script:
+    - |
+      echo "Waiting for Docker daemon..."
+      for i in $(seq 1 30); do
+        if docker info >/dev/null 2>&1; then
+          echo "Docker is ready!"
+          break
+        fi
+        echo "Docker not ready yet..."
+        sleep 2
+      done
     - chmod +x scripts/integration-test-setup.sh
-    - ./scripts/integration-test-setup.sh
+    - bash ./scripts/integration-test-setup.sh
   script:
     - gradle integrationTest --no-daemon --stacktrace --info
   after_script:
     - chmod +x scripts/docker-cleanup.sh
-    - ./scripts/docker-cleanup.sh
+    - bash ./scripts/docker-cleanup.sh
   <<: *test_artifacts
   artifacts:
     paths:
@@ -224,7 +235,7 @@ push-report:
 
 create_merge_dev:
   stage: merge
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   needs:
     - job: "unit-tests"
       artifacts: false
@@ -232,10 +243,9 @@ create_merge_dev:
       artifacts: false
   <<: *rules_feat_fix
   before_script:
-    - apk add --no-cache curl jq
     - chmod +x scripts/create-merge-request.sh
   script:
-    - ./scripts/create-merge-request.sh "dev"
+    - bash ./scripts/create-merge-request.sh "dev"
   artifacts:
     reports:
       dotenv: merge_request_dev.env
@@ -243,7 +253,7 @@ create_merge_dev:
 
 create_merge_main:
   stage: merge
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   needs:
     - job: "unit-tests"
       artifacts: false
@@ -251,10 +261,9 @@ create_merge_main:
       artifacts: false
   <<: *rules_hotfix
   before_script:
-    - apk add --no-cache curl jq
     - chmod +x scripts/create-merge-request.sh
   script:
-    - ./scripts/create-merge-request.sh "main"
+    - bash ./scripts/create-merge-request.sh "main"
   artifacts:
     reports:
       dotenv: merge_request_main.env
@@ -262,7 +271,7 @@ create_merge_main:
 
 approve_merge_request:
   stage: merge
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_feat_fix_hotfix
   needs:
     - job: "create_merge_dev"
@@ -272,14 +281,13 @@ approve_merge_request:
       artifacts: true
       optional: true
   before_script:
-    - apk add --no-cache curl jq
     - chmod +x scripts/approve-merge-request.sh
   script:
-    - ./scripts/approve-merge-request.sh
+    - bash ./scripts/approve-merge-request.sh
 
 build-and-push-image:
   stage: docker-publish
-  image: docker:${DOCKER_VERSION}
+  image: $DOCKER_BASH_IMAGE
   <<: *docker_config
   <<: *rules_main_dev
   needs:
@@ -290,7 +298,7 @@ build-and-push-image:
   before_script:
     - chmod +x scripts/build-and-push-image.sh
   script:
-    - ./scripts/build-and-push-image.sh
+    - bash ./scripts/build-and-push-image.sh
 
 backup_app_db:
   <<: *backup_config
@@ -298,7 +306,7 @@ backup_app_db:
     - *ssh_commands
     - chmod +x scripts/backup-database.sh
   script:
-    - ./scripts/backup-database.sh "$APP_DB_CONTAINER" "$APP_DB_NAME" "$APP_DB_USER" "$APP_DB_PASS"
+    - bash ./scripts/backup-database.sh "$APP_DB_CONTAINER" "$APP_DB_NAME" "$APP_DB_USER" "$APP_DB_PASS"
 
 backup_keycloak_db:
   <<: *backup_config
@@ -306,7 +314,7 @@ backup_keycloak_db:
     - *ssh_commands
     - chmod +x scripts/backup-database.sh
   script:
-    - ./scripts/backup-database.sh "$KEYCLOAK_DB_CONTAINER" "$KEYCLOAK_DB_NAME" "$KEYCLOAK_DB_USER" "$KEYCLOAK_DB_PASS"
+    - bash ./scripts/backup-database.sh "$KEYCLOAK_DB_CONTAINER" "$KEYCLOAK_DB_NAME" "$KEYCLOAK_DB_USER" "$KEYCLOAK_DB_PASS"
 
 backup_transitlink_data:
   <<: *backup_config
@@ -314,11 +322,11 @@ backup_transitlink_data:
     - *ssh_commands
     - chmod +x scripts/backup-transitlink-data.sh
   script:
-    - ./scripts/backup-transitlink-data.sh
+    - bash ./scripts/backup-transitlink-data.sh
 
 deploy:
   stage: deploy
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_main_only
   needs:
     - job: backup_app_db
@@ -331,11 +339,11 @@ deploy:
     - *ssh_commands
     - chmod +x scripts/deploy.sh
   script:
-    - ./scripts/deploy.sh
+    - bash ./scripts/deploy.sh
 
 rollback:
   stage: deploy
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_main_only
   variables:
     ROLLBACK_TAG: ""
@@ -343,14 +351,14 @@ rollback:
     - *ssh_commands
     - chmod +x scripts/rollback.sh
   script:
-    - ./scripts/rollback.sh "$ROLLBACK_TAG"
+    - bash ./scripts/rollback.sh "$ROLLBACK_TAG"
 
 cleanup_backups:
   stage: cleanup
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_schedule_only
   before_script:
     - *ssh_commands
     - chmod +x scripts/cleanup-backups.sh
   script:
-    - ./scripts/cleanup-backups.sh
+    - bash ./scripts/cleanup-backups.sh

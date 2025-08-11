@@ -1,0 +1,22 @@
+# Custom Alpine image với SSH, bash và các tools thường dùng
+FROM alpine:3.22.1
+
+LABEL maintainer="transitlink-team"
+LABEL description="Alpine Linux with SSH, bash, curl, jq and common tools"
+
+# Install packages in a single layer to minimize image size
+RUN apk add --no-cache \
+    bash \
+    openssh \
+    curl \
+    jq \
+    git \
+    ca-certificates \
+    && rm -rf /var/cache/apk/*
+
+# Create ssh directory với proper permissions
+RUN mkdir -p ~/.ssh && chmod 700 ~/.ssh
+
+WORKDIR /workspace
+
+CMD ["/bin/bash"]

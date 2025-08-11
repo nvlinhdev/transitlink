@@ -3,12 +3,10 @@ package vn.edu.fpt.transitlink.profile.service.impl;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import vn.edu.fpt.transitlink.profile.dto.CreateProfileRequest;
 import vn.edu.fpt.transitlink.profile.dto.UserProfileDTO;
-import vn.edu.fpt.transitlink.profile.entity.Gender;
 import vn.edu.fpt.transitlink.profile.entity.UserProfile;
 import vn.edu.fpt.transitlink.profile.exception.ProfileErrorCode;
 import vn.edu.fpt.transitlink.profile.mapper.UserProfileMapper;
@@ -28,12 +26,10 @@ public class ProfileServiceImpl implements ProfileService {
     private static final long MAX_AUTH_AGE_SECONDS = 300;
     private final UserProfileRepository repository;
     private final UserProfileMapper mapper;
-    private final ApplicationEventPublisher eventPublisher;
     private final StringRedisTemplate redisTemplate;
 
-    public ProfileServiceImpl(UserProfileRepository repository, ApplicationEventPublisher eventPublisher, StringRedisTemplate redisTemplate) {
+    public ProfileServiceImpl(UserProfileRepository repository, StringRedisTemplate redisTemplate) {
         this.repository = repository;
-        this.eventPublisher = eventPublisher;
         this.mapper = UserProfileMapper.INSTANCE;
         this.redisTemplate = redisTemplate;
     }
@@ -59,6 +55,13 @@ public class ProfileServiceImpl implements ProfileService {
 
         repository.save(profile);
 
+        return mapper.toResponse(profile);
+    }
+
+    @Override
+    public UserProfileDTO getProfile(UUID accountId) {
+        UserProfile profile = repository.findByAccountId(accountId)
+                .orElseThrow(() -> new BusinessException(ProfileErrorCode.PROFILE_NOT_FOUND, "Profile not found for account: " + accountId));
         return mapper.toResponse(profile);
     }
 
