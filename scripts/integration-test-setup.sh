@@ -11,7 +11,7 @@ done
 
 # Display versions
 docker version
-gradlew --version
+gradle --version
 
 # Pull required images
 echo "Pulling required Docker images..."
