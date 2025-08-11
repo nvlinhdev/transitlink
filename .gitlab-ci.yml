@@ -188,6 +188,7 @@ integration-tests:
         echo "Docker not ready yet..."
         sleep 2
       done
+    - chmod +x ./gradlew
     - chmod +x scripts/integration-test-setup.sh
     - bash ./scripts/integration-test-setup.sh
   script:
