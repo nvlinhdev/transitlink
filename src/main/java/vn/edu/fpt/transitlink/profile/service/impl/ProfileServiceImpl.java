@@ -58,6 +58,13 @@ public class ProfileServiceImpl implements ProfileService {
         return mapper.toResponse(profile);
     }
 
+    @Override
+    public UserProfileDTO getProfile(UUID accountId) {
+        UserProfile profile = repository.findByAccountId(accountId)
+                .orElseThrow(() -> new BusinessException(ProfileErrorCode.PROFILE_NOT_FOUND, "Profile not found for account: " + accountId));
+        return mapper.toResponse(profile);
+    }
+
     private String extractPhoneNumber(String firebaseToken) {
         try {
             FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(firebaseToken);

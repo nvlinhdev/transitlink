@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface ProfileService {
     UserProfileDTO createProfile(UUID accountId, CreateProfileRequest request);
+    UserProfileDTO getProfile(UUID accountId);
 }

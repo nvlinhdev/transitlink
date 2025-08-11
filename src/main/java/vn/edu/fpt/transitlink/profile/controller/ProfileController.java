@@ -197,4 +197,11 @@ public class ProfileController {
                 .status(HttpStatus.CREATED)
                 .body(StandardResponse.created(response));
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<StandardResponse<UserProfileDTO>> getProfile(Principal principal) {
+        UUID accountId = RequestContextUtil.getAccountId(principal);
+        UserProfileDTO profile = service.getProfile(accountId);
+        return ResponseEntity.ok(StandardResponse.success(profile));
+    }
 }
