@@ -164,7 +164,7 @@ unit-tests:
 
 integration-tests:
   stage: test
-  image: gradle:${GRADLE_VERSION}
+  image: docker:${DOCKER_VERSION}
   <<: *docker_config
   variables:
     TESTCONTAINERS_HOST_OVERRIDE: docker
@@ -173,11 +173,23 @@ integration-tests:
     GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
   <<: *rules_feat_fix_hotfix_main_dev
   before_script:
-    - apk add --no-cache bash
+    # Cài Java JDK
+    - apk add --no-cache bash openjdk21
+    # Đảm bảo Docker daemon đã sẵn sàng
+    - |
+      echo "Waiting for Docker daemon..."
+      for i in $(seq 1 30); do
+        if docker info >/dev/null 2>&1; then
+          echo "Docker is ready!"
+          break
+        fi
+        echo "Docker not ready yet..."
+        sleep 2
+      done
     - chmod +x scripts/integration-test-setup.sh
     - bash ./scripts/integration-test-setup.sh
   script:
-    - gradle integrationTest --no-daemon --stacktrace --info
+    - ./gradlew integrationTest --no-daemon --stacktrace --info
   after_script:
     - chmod +x scripts/docker-cleanup.sh
     - bash ./scripts/docker-cleanup.sh
@@ -192,6 +204,7 @@ integration-tests:
     when:
       - runner_system_failure
       - stuck_or_timeout_failure
+
 
 generate_report:
   stage: test

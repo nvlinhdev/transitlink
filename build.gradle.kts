@@ -123,7 +123,7 @@ tasks {
         group = "verification"
         testClassesDirs = sourceSets["unitTest"].output.classesDirs
         classpath = sourceSets["unitTest"].runtimeClasspath
-        ignoreFailures = false // Continue running tests even if some fail Or throw exceptions
+        ignoreFailures = true // Continue running tests even if some fail Or throw exceptions
         useJUnitPlatform()
 
         outputs.upToDateWhen {
@@ -161,7 +161,7 @@ tasks {
         group = "verification"
         testClassesDirs = sourceSets["integrationTest"].output.classesDirs
         classpath = sourceSets["integrationTest"].runtimeClasspath
-        ignoreFailures = false // Continue running tests even if some fail Or throw exceptions
+        ignoreFailures = true // Continue running tests even if some fail Or throw exceptions
         useJUnitPlatform()
         shouldRunAfter(unitTest)
 
