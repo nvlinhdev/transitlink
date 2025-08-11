@@ -14,7 +14,7 @@ done
 
 # Display versions
 docker version
-gradle --version
+./gradlew --version
 
 # Clean up previous runs
 docker system prune -f || true

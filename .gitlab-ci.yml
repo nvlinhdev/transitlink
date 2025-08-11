@@ -32,6 +32,8 @@ stages:
     - "build.gradle.kts"
     - "setting.gradle.kts"
     - "src/**/*"
+    - "scripts/**/*"
+    - ".gitlab-ci.yml"
 
 .exclude_schedule: &exclude_schedule
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
