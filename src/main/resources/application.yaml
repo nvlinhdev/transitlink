@@ -131,7 +131,5 @@ springdoc:
       offline_access: Offline access (refresh token)
 
   groups:
-    - group: profile
-      paths: /api/profiles/**
     - group: storage
       paths: /api/storage/**
