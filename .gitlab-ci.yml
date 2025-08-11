@@ -1,5 +1,10 @@
 variables:
   DOCKER_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend
+ 
+  ALPINE_SSH_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend/alpine-ssh:latest
+  DOCKER_JAVA_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend/docker-java:latest
+  DOCKER_BASH_IMAGE: registry.gitlab.com/sep490_g80/transit-link-backend/docker-bash:latest
+  
   USER: transitlink
   PROJECT_DIR: "/srv/transitlink"
   BACKUPS_DIR: "/backups"
@@ -36,8 +41,8 @@ stages:
     - ".gitlab-ci.yml"
 
 .exclude_schedule: &exclude_schedule
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
+  - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    when: never
 
 .rules_feat_fix_hotfix_main_dev: &rules_feat_fix_hotfix_main_dev
   rules:
@@ -59,7 +64,7 @@ stages:
     - when: never
 
 .rules_feat_fix: &rules_feat_fix
-    rules:
+  rules:
     - *exclude_schedule
     - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix)\/.+/'
       <<: *changes
@@ -106,7 +111,6 @@ stages:
 
 # define templates
 .ssh_commands: &ssh_commands
-  - apk add --no-cache bash openssh
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
   - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
@@ -127,18 +131,13 @@ stages:
         - build/test-results/*/TEST-*.xml
 
 .docker_config: &docker_config
-  services:
-    - name: docker:${DOCKER_VERSION}-dind
-      alias: docker
-      command: ["--tls=false"]
   variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: unix:///var/run/docker.sock
     DOCKER_DRIVER: overlay2
 
 .backup_config: &backup_config
   stage: backup
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_main_only
   needs:
     - job: build-and-push-image
@@ -166,18 +165,15 @@ unit-tests:
 
 integration-tests:
   stage: test
-  image: docker:${DOCKER_VERSION}
+  image: $DOCKER_JAVA_IMAGE
   <<: *docker_config
   variables:
-    TESTCONTAINERS_HOST_OVERRIDE: docker
+    TESTCONTAINERS_HOST_OVERRIDE: 172.17.0.1
     TESTCONTAINERS_RYUK_DISABLED: "true"
     TESTCONTAINERS_CHECKS_DISABLE: "true"
     GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
   <<: *rules_feat_fix_hotfix_main_dev
   before_script:
-    # Cài Java JDK
-    - apk add --no-cache bash openjdk21
-    # Đảm bảo Docker daemon đã sẵn sàng
     - |
       echo "Waiting for Docker daemon..."
       for i in $(seq 1 30); do
@@ -188,11 +184,10 @@ integration-tests:
         echo "Docker not ready yet..."
         sleep 2
       done
-    - chmod +x ./gradlew
     - chmod +x scripts/integration-test-setup.sh
     - bash ./scripts/integration-test-setup.sh
   script:
-    - ./gradlew integrationTest --no-daemon --stacktrace --info
+    - gradle integrationTest --no-daemon --stacktrace --info
   after_script:
     - chmod +x scripts/docker-cleanup.sh
     - bash ./scripts/docker-cleanup.sh
@@ -207,7 +202,6 @@ integration-tests:
     when:
       - runner_system_failure
       - stuck_or_timeout_failure
-
 
 generate_report:
   stage: test
@@ -241,7 +235,7 @@ push-report:
 
 create_merge_dev:
   stage: merge
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   needs:
     - job: "unit-tests"
       artifacts: false
@@ -249,7 +243,6 @@ create_merge_dev:
       artifacts: false
   <<: *rules_feat_fix
   before_script:
-    - apk add --no-cache bash curl jq
     - chmod +x scripts/create-merge-request.sh
   script:
     - bash ./scripts/create-merge-request.sh "dev"
@@ -260,7 +253,7 @@ create_merge_dev:
 
 create_merge_main:
   stage: merge
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   needs:
     - job: "unit-tests"
       artifacts: false
@@ -268,7 +261,6 @@ create_merge_main:
       artifacts: false
   <<: *rules_hotfix
   before_script:
-    - apk add --no-cache bash curl jq
     - chmod +x scripts/create-merge-request.sh
   script:
     - bash ./scripts/create-merge-request.sh "main"
@@ -279,7 +271,7 @@ create_merge_main:
 
 approve_merge_request:
   stage: merge
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_feat_fix_hotfix
   needs:
     - job: "create_merge_dev"
@@ -289,14 +281,13 @@ approve_merge_request:
       artifacts: true
       optional: true
   before_script:
-    - apk add --no-cache bash curl jq
     - chmod +x scripts/approve-merge-request.sh
   script:
     - bash ./scripts/approve-merge-request.sh
 
 build-and-push-image:
   stage: docker-publish
-  image: docker:${DOCKER_VERSION}
+  image: $DOCKER_BASH_IMAGE
   <<: *docker_config
   <<: *rules_main_dev
   needs:
@@ -305,7 +296,6 @@ build-and-push-image:
     - job: "integration-tests"
       artifacts: false
   before_script:
-    - apk add --no-cache bash
     - chmod +x scripts/build-and-push-image.sh
   script:
     - bash ./scripts/build-and-push-image.sh
@@ -336,7 +326,7 @@ backup_transitlink_data:
 
 deploy:
   stage: deploy
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_main_only
   needs:
     - job: backup_app_db
@@ -353,7 +343,7 @@ deploy:
 
 rollback:
   stage: deploy
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_main_only
   variables:
     ROLLBACK_TAG: ""
@@ -365,7 +355,7 @@ rollback:
 
 cleanup_backups:
   stage: cleanup
-  image: alpine:${ALPINE_VERSION}
+  image: $ALPINE_SSH_IMAGE
   <<: *rules_schedule_only
   before_script:
     - *ssh_commands

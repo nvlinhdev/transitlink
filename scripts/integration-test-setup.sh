@@ -3,9 +3,6 @@ set -e
 
 echo "Setting up integration test environment..."
 
-# Install required packages
-apk add --no-cache docker-cli curl
-
 # Wait for docker daemon to be ready
 until docker info; do
     echo "Waiting for docker to start..."
@@ -14,10 +11,7 @@ done
 
 # Display versions
 docker version
-./gradlew --version
-
-# Clean up previous runs
-docker system prune -f || true
+gradlew --version
 
 # Pull required images
 echo "Pulling required Docker images..."
