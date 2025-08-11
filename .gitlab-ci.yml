@@ -47,7 +47,7 @@ stages:
 .rules_feat_fix_hotfix_main_dev: &rules_feat_fix_hotfix_main_dev
   rules:
     - *exclude_schedule
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
+    - if: '$CI_COMMIT_BRANCH =~ /^(fix|hotfix)\/.+/ || ($CI_COMMIT_BRANCH =~ /^feat\/.+/ && $CI_COMMIT_MESSAGE =~ /^test:/)'
       <<: *changes
       when: on_success
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -58,7 +58,7 @@ stages:
 .rules_feat_fix_hotfix: &rules_feat_fix_hotfix
   rules:
     - *exclude_schedule
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix|hotfix)\/.+/'
+    - if: '$CI_COMMIT_BRANCH =~ /^(fix|hotfix)\/.+/ || ($CI_COMMIT_BRANCH =~ /^feat\/.+/ && $CI_COMMIT_MESSAGE =~ /^test:/)'
       <<: *changes
       when: on_success
     - when: never
@@ -66,7 +66,7 @@ stages:
 .rules_feat_fix: &rules_feat_fix
   rules:
     - *exclude_schedule
-    - if: '$CI_COMMIT_BRANCH =~ /^(feat|fix)\/.+/'
+    - if: '$CI_COMMIT_BRANCH =~ /^fix\/.+/ || ($CI_COMMIT_BRANCH =~ /^feat\/.+/ && $CI_COMMIT_MESSAGE =~ /^test:/)'
       <<: *changes
       when: on_success
     - when: never
