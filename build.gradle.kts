@@ -1,6 +1,7 @@
 plugins {
     java
     jacoco
+    idea
     id("org.springframework.boot") version "3.4.7"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.springdoc.openapi-gradle-plugin") version "1.9.0"
@@ -12,18 +13,16 @@ group = "vn.edu.fpt"
 version = "1.0.0-SNAPSHOT"
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
 }
 
-// JaCoCo Configuration
+// JaCoCo
 jacoco {
     toolVersion = "0.8.13"
     reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
 }
 
-// SonarQube Configuration
+// SonarQube
 sonar {
     properties {
         property("sonar.projectKey", "sep490_g80_transit-link-backend")
@@ -37,40 +36,53 @@ sonar {
     }
 }
 
-configurations {
-    compileOnly {
-        extendsFrom(configurations.annotationProcessor.get())
-    }
+val unitTestImplementation by configurations.creating {
+    extendsFrom(configurations["testImplementation"])
 }
-
-repositories {
-    mavenCentral()
+val unitTestRuntimeOnly by configurations.creating {
+    extendsFrom(configurations["testRuntimeOnly"])
 }
-
-val springModulithVersion = "1.4.1"
+val integrationTestImplementation by configurations.creating {
+    extendsFrom(configurations["testImplementation"])
+}
+val integrationTestRuntimeOnly by configurations.creating {
+    extendsFrom(configurations["testRuntimeOnly"])
+}
 
 sourceSets {
     create("unitTest") {
         java.srcDir("src/unitTest/java")
         resources.srcDir("src/unitTest/resources")
-        compileClasspath += sourceSets["main"].output
+        compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
         runtimeClasspath += output + compileClasspath
     }
 
     create("integrationTest") {
         java.srcDir("src/integrationTest/java")
         resources.srcDir("src/integrationTest/resources")
-        compileClasspath += sourceSets["main"].output
+        compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
         runtimeClasspath += output + compileClasspath
     }
 }
-val openApiVersion = "2.8.9"
-val mapstructVersion = "1.6.3"
-val firebaseAdminVersion = "9.5.0"
-val mapstructLombokBindingVersion = "0.2.0"
+
+idea {
+    module {
+        testSources.from(sourceSets["unitTest"].java.srcDirs)
+        testSources.from(sourceSets["integrationTest"].java.srcDirs)
+        testResources.from(sourceSets["unitTest"].resources.srcDirs)
+        testResources.from(sourceSets["integrationTest"].resources.srcDirs)
+    }
+}
+
+repositories { mavenCentral() }
 
 dependencies {
-    // Spring Boot Starters
+    val openApiVersion = "2.8.9"
+    val mapstructVersion = "1.6.3"
+    val firebaseAdminVersion = "9.5.0"
+    val mapstructLombokBindingVersion = "0.2.0"
+
+    // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
@@ -78,380 +90,207 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    // Spring Modulith
+
+    // Modulith
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jpa")
+
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openApiVersion")
-    // firebase-admin
-    implementation("com.google.firebase:firebase-admin:${firebaseAdminVersion}")
-    // MapStruct for object mapping
-    implementation("org.mapstruct:mapstruct:${mapstructVersion}")
-    // PostgreSQL driver
+
+    // Firebase
+    implementation("com.google.firebase:firebase-admin:$firebaseAdminVersion")
+
+    // MapStruct
+    implementation("org.mapstruct:mapstruct:$mapstructVersion")
+
+    // PostgreSQL
     runtimeOnly("org.postgresql:postgresql")
-    // Devtools for hot reload (development only)
+
+    // Devtools
     developmentOnly("org.springframework.boot:spring-boot-devtools")
-    // Lombok (for annotations like @Getter, @Builder, etc.)
+
+    // Lombok + Annotation Processors
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
-    // MapStruct Lombok binding for better integration with Lombok
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     annotationProcessor("org.projectlombok:lombok-mapstruct-binding:$mapstructLombokBindingVersion")
 
-    val sharedTestDeps = listOf(
-        "org.springframework.boot:spring-boot-starter-test",
-        "org.springframework.modulith:spring-modulith-starter-test",
-        "org.springframework.security:spring-security-test",
-        "org.junit.platform:junit-platform-launcher",
+    // Thư viện test chung
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.springframework.modulith:spring-modulith-starter-test")
 
-        "org.testcontainers:testcontainers:1.20.1",
-        "org.testcontainers:junit-jupiter:1.20.1",
-
-        "org.springframework.boot:spring-boot-testcontainers:3.3.3",
-        "org.postgresql:postgresql:42.7.3"
-    )
-
-    sharedTestDeps.forEach {
-        add("unitTestImplementation", it)
-        add("integrationTestImplementation", it)
-    }
+    // Thư viện chỉ cho integration test
+    integrationTestImplementation("org.testcontainers:junit-jupiter")
+    integrationTestImplementation("org.testcontainers:postgresql")
+    integrationTestImplementation("org.springframework.boot:spring-boot-testcontainers")
+    integrationTestImplementation("com.redis:testcontainers-redis")
 }
 
 dependencyManagement {
-    imports {
-        mavenBom("org.springframework.modulith:spring-modulith-bom:$springModulithVersion")
-    }
+    val springModulithVersion = "1.4.1"
+    imports { mavenBom("org.springframework.modulith:spring-modulith-bom:$springModulithVersion") }
 }
 
+// ================== COMMON CONFIG ==================
+val excludedClassesForCoverage = listOf(
+    "**/shared/**",
+    "**/storage/**",
+    "**/config/**",
+    "**/dto/**",
+    "**/entity/**",
+    "**/exception/**",
+    "**/mapper/**",
+    "**/repository/**",
+    "**/*Application*",
+    "**/*Module*"
+)
+
+fun JacocoReport.applyCommonExcludes() {
+    classDirectories.setFrom(
+        sourceSets["main"].output.classesDirs.map { fileTree(it).exclude(excludedClassesForCoverage) }
+    )
+}
+
+fun JacocoCoverageVerification.applyCommonExcludes() {
+    classDirectories.setFrom(
+        sourceSets["main"].output.classesDirs.map { fileTree(it).exclude(excludedClassesForCoverage) }
+    )
+}
+
+// ================== TASKS ==================
 tasks {
-    // Unit Test Task
+    test { enabled = false } // disable default test
+
     val unitTest by registering(Test::class) {
         description = "Run unit tests"
         group = "verification"
         testClassesDirs = sourceSets["unitTest"].output.classesDirs
         classpath = sourceSets["unitTest"].runtimeClasspath
-        ignoreFailures = true // Continue running tests even if some fail Or throw exceptions
+        ignoreFailures = true
         useJUnitPlatform()
-
-        outputs.upToDateWhen {
-            // Check if jacoco exec file exists and is newer than source files
-            val execFile = layout.buildDirectory.file("jacoco/unitTest.exec").get().asFile
-            execFile.exists() &&
-                    execFile.lastModified() > sourceSets["main"].allSource.files.maxOfOrNull { it.lastModified() } ?: 0
-        }
-
-        // JaCoCo configuration for unit tests
         extensions.configure(JacocoTaskExtension::class) {
             isEnabled = true
             setDestinationFile(layout.buildDirectory.file("jacoco/unitTest.exec").get().asFile)
-            includes = emptyList()
-            excludes = listOf(
-                "**/shared/**",
-                "**/storage/**",
-                "**/config/**",
-                "**/dto/**",
-                "**/entity/**",
-                "**/exception/**",
-                "**/mapper/**",
-                "**/repository/**",
-                "**/*Application*",
-                "**/*Module*"
-            )
+            excludes = excludedClassesForCoverage
             isIncludeNoLocationClasses = false
             isDumpOnExit = true
         }
     }
 
-    // Integration Test Task
     val integrationTest by registering(Test::class) {
         description = "Run integration tests"
         group = "verification"
         testClassesDirs = sourceSets["integrationTest"].output.classesDirs
         classpath = sourceSets["integrationTest"].runtimeClasspath
-        ignoreFailures = true // Continue running tests even if some fail Or throw exceptions
+        ignoreFailures = true
         useJUnitPlatform()
         shouldRunAfter(unitTest)
-
-        outputs.upToDateWhen {
-            val execFile = layout.buildDirectory.file("jacoco/integrationTest.exec").get().asFile
-            execFile.exists() &&
-                    execFile.lastModified() > sourceSets["main"].allSource.files.maxOfOrNull { it.lastModified() } ?: 0
-        }
-
-        // JaCoCo configuration for integration tests
         extensions.configure(JacocoTaskExtension::class) {
             isEnabled = true
             setDestinationFile(layout.buildDirectory.file("jacoco/integrationTest.exec").get().asFile)
-            includes = emptyList()
-            excludes = listOf(
-                "**/shared/**",
-                "**/storage/**",
-                "**/config/**",
-                "**/dto/**",
-                "**/entity/**",
-                "**/exception/**",
-                "**/mapper/**",
-                "**/repository/**",
-                "**/*Application*",
-                "**/*Module*"
-            )
+            excludes = excludedClassesForCoverage
             isIncludeNoLocationClasses = false
             isDumpOnExit = true
         }
     }
 
-    // JaCoCo Report for Unit Tests
     val jacocoUnitTestReport by registering(JacocoReport::class) {
-        description = "Generate JaCoCo coverage report for unit tests"
-        group = "reporting"
-
         dependsOn(unitTest)
         executionData(unitTest.get())
         sourceSets(sourceSets["main"])
-
-        // Thêm cấu hình exclude cho báo cáo
-        classDirectories.setFrom(
-            sourceSets["main"].output.classesDirs.map {
-                fileTree(it) {
-                    exclude(
-                        "**/shared/**",
-                        "**/storage/**",
-                        "**/config/**",
-                        "**/dto/**",
-                        "**/entity/**",
-                        "**/exception/**",
-                        "**/mapper/**",
-                        "**/repository/**",
-                        "**/*Application*",
-                        "**/*Module*"
-                    )
-                }
-            }
-        )
-
+        applyCommonExcludes()
         reports {
             xml.required = true
-            csv.required = false
             html.required = true
-            html.outputLocation = layout.buildDirectory.dir("reports/jacoco/unitTest")
+            html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/unitTest"))
         }
     }
 
-    // JaCoCo Report for Integration Tests
     val jacocoIntegrationTestReport by registering(JacocoReport::class) {
-        description = "Generate JaCoCo coverage report for integration tests"
-        group = "reporting"
-
         dependsOn(integrationTest)
         executionData(integrationTest.get())
         sourceSets(sourceSets["main"])
-
-        // Thêm cấu hình exclude cho báo cáo
-        classDirectories.setFrom(
-            sourceSets["main"].output.classesDirs.map {
-                fileTree(it) {
-                    exclude(
-                        "**/shared/**",
-                        "**/storage/**",
-                        "**/config/**",
-                        "**/dto/**",
-                        "**/entity/**",
-                        "**/exception/**",
-                        "**/mapper/**",
-                        "**/repository/**",
-                        "**/*Application*",
-                        "**/*Module*"
-                    )
-                }
-            }
-        )
-
+        applyCommonExcludes()
         reports {
             xml.required = true
-            csv.required = false
             html.required = true
-            html.outputLocation = layout.buildDirectory.dir("reports/jacoco/integrationTest")
+            html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/integrationTest"))
         }
     }
 
-    // Combined JaCoCo Report (Unit + Integration Tests)
     val jacocoCombinedTestReport by registering(JacocoReport::class) {
-        description = "Generate combined JaCoCo coverage report"
-        group = "reporting"
-
-        doFirst {
-            val unitExec = layout.buildDirectory.file("jacoco/unitTest.exec").get().asFile
-            val integExec = layout.buildDirectory.file("jacoco/integrationTest.exec").get().asFile
-
-            if (!unitExec.exists() || !integExec.exists()) {
-                throw GradleException(
-                    """
-                        |JaCoCo execution files not found. Please run tests first:
-                        |  ./gradlew unitTest integrationTest jacocoCombinedTestReport
-                    """.trimMargin()
-                )
-            }
-        }
-
+        dependsOn(unitTest, integrationTest)
         executionData.from(
-            fileTree(layout.buildDirectory.dir("jacoco")).include("unitTest.exec", "integrationTest.exec")
+            fileTree(layout.buildDirectory.dir("jacoco")).include(
+                "unitTest.exec",
+                "integrationTest.exec"
+            )
         )
         sourceSets(sourceSets["main"])
-
-        // Thêm cấu hình exclude cho báo cáo combined
-        classDirectories.setFrom(
-            sourceSets["main"].output.classesDirs.map {
-                fileTree(it) {
-                    exclude(
-                        "**/shared/**",
-                        "**/storage/**",
-                        "**/config/**",
-                        "**/dto/**",
-                        "**/entity/**",
-                        "**/exception/**",
-                        "**/mapper/**",
-                        "**/repository/**",
-                        "**/*Application*",
-                        "**/*Module*"
-                    )
-                }
-            }
-        )
-
+        applyCommonExcludes()
         reports {
             xml.required = true
-            csv.required = false
             html.required = true
-            html.outputLocation = layout.buildDirectory.dir("reports/jacoco/combined")
+            html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/combined"))
         }
     }
 
-    // Coverage Verification for Unit Tests
     val jacocoUnitTestCoverageVerification by registering(JacocoCoverageVerification::class) {
-        description = "Verify unit test code coverage metrics"
-        group = "verification"
-
         dependsOn(unitTest)
         executionData(unitTest.get())
         sourceSets(sourceSets["main"])
-
-        // Thêm cấu hình exclude cho verification
-        classDirectories.setFrom(
-            sourceSets["main"].output.classesDirs.map {
-                fileTree(it) {
-                    exclude(
-                        "**/shared/**",
-                        "**/storage/**",
-                        "**/config/**",
-                        "**/dto/**",
-                        "**/entity/**",
-                        "**/exception/**",
-                        "**/mapper/**",
-                        "**/repository/**",
-                        "**/*Application*",
-                        "**/*Module*"
-                    )
-                }
-            }
-        )
-
+        applyCommonExcludes()
         violationRules {
             rule {
-                limit {
-                    counter = "INSTRUCTION"
-                    value = "COVEREDRATIO"
-                    minimum = "0.85".toBigDecimal()
-                }
-                limit {
-                    counter = "LINE"
-                    value = "COVEREDRATIO"
-                    minimum = "0.85".toBigDecimal()
-                }
-                limit {
-                    counter = "BRANCH"
-                    value = "COVEREDRATIO"
-                    minimum = "0.8".toBigDecimal()
-                }
-                isFailOnViolation = true // Set to false to allow builds to pass even if coverage is below thresholds
+                limit { counter = "INSTRUCTION"; value = "COVEREDRATIO"; minimum = "0.85".toBigDecimal() }
+                limit { counter = "LINE"; value = "COVEREDRATIO"; minimum = "0.85".toBigDecimal() }
+                limit { counter = "BRANCH"; value = "COVEREDRATIO"; minimum = "0.8".toBigDecimal() }
+                isFailOnViolation = true
             }
         }
     }
 
-    // Coverage Verification for Integration Tests
     val jacocoIntegrationTestCoverageVerification by registering(JacocoCoverageVerification::class) {
-        description = "Verify integration test code coverage metrics"
-        group = "verification"
-
         dependsOn(integrationTest)
         executionData(integrationTest.get())
         sourceSets(sourceSets["main"])
-
-        // Thêm cấu hình exclude cho verification
-        classDirectories.setFrom(
-            sourceSets["main"].output.classesDirs.map {
-                fileTree(it) {
-                    exclude(
-                        "**/shared/**",
-                        "**/storage/**",
-                        "**/config/**",
-                        "**/dto/**",
-                        "**/entity/**",
-                        "**/exception/**",
-                        "**/mapper/**",
-                        "**/repository/**",
-                        "**/*Application*",
-                        "**/*Module*"
-                    )
-                }
-            }
-        )
-
+        applyCommonExcludes()
         violationRules {
             rule {
-                limit {
-                    counter = "INSTRUCTION"
-                    value = "COVEREDRATIO"
-                    minimum = "0.7".toBigDecimal()
-                }
-                limit {
-                    counter = "LINE"
-                    value = "COVEREDRATIO"
-                    minimum = "0.75".toBigDecimal()
-                }
-                limit {
-                    counter = "BRANCH"
-                    value = "COVEREDRATIO"
-                    minimum = "0.6".toBigDecimal()
-                }
-                isFailOnViolation = true // Set to false to allow builds to pass even if coverage is below thresholds
+                limit { counter = "INSTRUCTION"; value = "COVEREDRATIO"; minimum = "0.7".toBigDecimal() }
+                limit { counter = "LINE"; value = "COVEREDRATIO"; minimum = "0.75".toBigDecimal() }
+                limit { counter = "BRANCH"; value = "COVEREDRATIO"; minimum = "0.6".toBigDecimal() }
+                isFailOnViolation = true
             }
-
         }
     }
 
-    // Disable default test task
-    test {
-        enabled = false
-    }
-
-    // Configure check task to run unit test coverage verification
-    unitTest() {
-        finalizedBy(jacocoUnitTestCoverageVerification)
-    }
-
-    // Configure check task to run integration test coverage verification
-    integrationTest() {
-        finalizedBy(jacocoIntegrationTestCoverageVerification)
-    }
-
-    // Configure check task to run all tests and generate combined report
+    unitTest { finalizedBy(jacocoUnitTestCoverageVerification) }
+    integrationTest { finalizedBy(jacocoIntegrationTestCoverageVerification) }
     check {
         dependsOn(unitTest, integrationTest)
         finalizedBy(jacocoCombinedTestReport)
     }
-
-    // Configure build task
-    build {
-        dependsOn(check)
-    }
+    build { dependsOn(check) }
 }
+
+tasks.named<ProcessResources>("processIntegrationTestResources") {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named<ProcessResources>("processUnitTestResources") {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType<Test> {
+    jvmArgs(
+        "-XX:+EnableDynamicAgentLoading",
+        "-Xshare:off",
+        "-Djdk.attach.allowAttachSelf=true",
+        "-javaagent:" + configurations.testRuntimeClasspath.get()
+            .find { it.name.contains("mockito-core") }!!.absolutePath
+    )
+}
+
