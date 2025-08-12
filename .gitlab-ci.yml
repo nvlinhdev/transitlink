@@ -130,11 +130,6 @@ stages:
       junit:
         - build/test-results/*/TEST-*.xml
 
-.docker_config: &docker_config
-  variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
-    DOCKER_DRIVER: overlay2
-
 .backup_config: &backup_config
   stage: backup
   image: $ALPINE_SSH_IMAGE
@@ -166,7 +161,6 @@ unit-tests:
 integration-tests:
   stage: test
   image: $DOCKER_JAVA_IMAGE
-  <<: *docker_config
   variables:
     TESTCONTAINERS_RYUK_DISABLED: "true"
     TESTCONTAINERS_CHECKS_DISABLE: "true"
@@ -287,7 +281,6 @@ approve_merge_request:
 build-and-push-image:
   stage: docker-publish
   image: $DOCKER_BASH_IMAGE
-  <<: *docker_config
   <<: *rules_main_dev
   needs:
     - job: "unit-tests"
