@@ -359,6 +359,6 @@ cleanup_backups:
   <<: *rules_schedule_only
   before_script:
     - *ssh_commands
-    - chmod +x scripts/cleanup-backups.sh
+    - chmod +x scripts/cleanup-backup.sh
   script:
-    - bash ./scripts/cleanup-backups.sh
+    - bash ./scripts/cleanup-backup.sh
