@@ -35,34 +35,36 @@ sonar {
         )
     }
 }
-
-val unitTestImplementation by configurations.creating {
-    extendsFrom(configurations["testImplementation"])
-}
-val unitTestRuntimeOnly by configurations.creating {
-    extendsFrom(configurations["testRuntimeOnly"])
-}
-val integrationTestImplementation by configurations.creating {
-    extendsFrom(configurations["testImplementation"])
-}
-val integrationTestRuntimeOnly by configurations.creating {
-    extendsFrom(configurations["testRuntimeOnly"])
-}
-
 sourceSets {
-    create("unitTest") {
+    val unitTest by creating {
         java.srcDir("src/unitTest/java")
         resources.srcDir("src/unitTest/resources")
         compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
         runtimeClasspath += output + compileClasspath
     }
 
-    create("integrationTest") {
+    val integrationTest by creating {
         java.srcDir("src/integrationTest/java")
         resources.srcDir("src/integrationTest/resources")
         compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
         runtimeClasspath += output + compileClasspath
     }
+}
+
+// ---------------- Configurations ----------------
+val unitTestImplementation = configurations[sourceSets["unitTest"].implementationConfigurationName]
+val unitTestRuntimeOnly = configurations[sourceSets["unitTest"].runtimeOnlyConfigurationName]
+val integrationTestImplementation = configurations[sourceSets["integrationTest"].implementationConfigurationName]
+val integrationTestRuntimeOnly = configurations[sourceSets["integrationTest"].runtimeOnlyConfigurationName]
+
+configurations {
+    val unitTest = sourceSets["unitTest"]
+    getByName(unitTest.implementationConfigurationName).extendsFrom(getByName("testImplementation"))
+    getByName(unitTest.runtimeOnlyConfigurationName).extendsFrom(getByName("testRuntimeOnly"))
+
+    val integrationTest = sourceSets["integrationTest"]
+    getByName(integrationTest.implementationConfigurationName).extendsFrom(getByName("testImplementation"))
+    getByName(integrationTest.runtimeOnlyConfigurationName).extendsFrom(getByName("testRuntimeOnly"))
 }
 
 idea {
@@ -90,37 +92,28 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-
     // Modulith
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jpa")
-
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openApiVersion")
-
     // Firebase
     implementation("com.google.firebase:firebase-admin:$firebaseAdminVersion")
-
     // MapStruct
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
-
     // PostgreSQL
     runtimeOnly("org.postgresql:postgresql")
-
     // Devtools
     developmentOnly("org.springframework.boot:spring-boot-devtools")
-
     // Lombok + Annotation Processors
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     annotationProcessor("org.projectlombok:lombok-mapstruct-binding:$mapstructLombokBindingVersion")
-
     // Thư viện test chung
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.springframework.modulith:spring-modulith-starter-test")
-
     // Thư viện chỉ cho integration test
     integrationTestImplementation("org.testcontainers:junit-jupiter")
     integrationTestImplementation("org.testcontainers:postgresql")
