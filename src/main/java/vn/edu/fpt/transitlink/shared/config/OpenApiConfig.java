@@ -14,7 +14,7 @@ import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
-@Profile("!prod")
+@Profile("dev")
 public class OpenApiConfig {
 
     private final SpringDocProperties props;
