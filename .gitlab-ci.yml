@@ -113,7 +113,7 @@ stages:
 .ssh_commands: &ssh_commands
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
-  - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+  - cat "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
   - chmod 600 ~/.ssh/id_rsa
   - ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
   - chmod 644 ~/.ssh/known_hosts
@@ -150,7 +150,7 @@ unit-tests:
   image: gradle:${GRADLE_VERSION}
   <<: *rules_feat_fix_hotfix_main_dev
   script:
-    - gradle clean unitTest --no-daemon
+    - gradle clean unitTest --no-daemon --info
   <<: *test_artifacts
   artifacts:
     paths:
@@ -180,7 +180,7 @@ integration-tests:
     - chmod +x scripts/integration-test-setup.sh
     - bash ./scripts/integration-test-setup.sh
   script:
-    - gradle integrationTest --no-daemon
+    - gradle integrationTest --no-daemon --info
   after_script:
     - chmod +x scripts/docker-cleanup.sh
     - bash ./scripts/docker-cleanup.sh
@@ -206,7 +206,7 @@ generate_report:
       artifacts: true
   <<: *rules_feat_fix_hotfix_main_dev
   script:
-    - gradle jacocoCombinedTestReport --no-daemon
+    - gradle jacocoCombinedTestReport --no-daemon --info
   artifacts:
     when: always
     paths:
@@ -224,7 +224,7 @@ push-report:
   before_script:
     - echo "$SONAR_TOKEN"
   script:
-    - gradle sonar
+    - gradle sonar --no-daemon --info
 
 create_merge_dev:
   stage: merge
