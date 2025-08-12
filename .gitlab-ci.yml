@@ -155,7 +155,7 @@ unit-tests:
   image: gradle:${GRADLE_VERSION}
   <<: *rules_feat_fix_hotfix_main_dev
   script:
-    - gradle clean unitTest --no-daemon --stacktrace --info
+    - gradle clean unitTest --no-daemon
   <<: *test_artifacts
   artifacts:
     paths:
@@ -187,7 +187,7 @@ integration-tests:
     - chmod +x scripts/integration-test-setup.sh
     - bash ./scripts/integration-test-setup.sh
   script:
-    - gradle integrationTest --no-daemon --stacktrace --info
+    - gradle integrationTest --no-daemon
   after_script:
     - chmod +x scripts/docker-cleanup.sh
     - bash ./scripts/docker-cleanup.sh
@@ -213,7 +213,7 @@ generate_report:
       artifacts: true
   <<: *rules_feat_fix_hotfix_main_dev
   script:
-    - gradle jacocoCombinedTestReport --no-daemon --stacktrace --info
+    - gradle jacocoCombinedTestReport --no-daemon
   artifacts:
     when: always
     paths:
@@ -359,6 +359,6 @@ cleanup_backups:
   <<: *rules_schedule_only
   before_script:
     - *ssh_commands
-    - chmod +x scripts/cleanup-backups.sh
+    - chmod +x scripts/cleanup-backup.sh
   script:
-    - bash ./scripts/cleanup-backups.sh
+    - bash ./scripts/cleanup-backup.sh
