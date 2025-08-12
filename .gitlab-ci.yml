@@ -168,7 +168,6 @@ integration-tests:
   image: $DOCKER_JAVA_IMAGE
   <<: *docker_config
   variables:
-    TESTCONTAINERS_HOST_OVERRIDE: 172.17.0.1
     TESTCONTAINERS_RYUK_DISABLED: "true"
     TESTCONTAINERS_CHECKS_DISABLE: "true"
     GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
