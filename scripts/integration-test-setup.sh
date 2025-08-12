@@ -3,6 +3,10 @@ set -e
 
 echo "Setting up integration test environment..."
 
+# Create test data directory
+mkdir -p ./test-data
+chmod 777 ./test-data
+
 # Wait for docker daemon to be ready
 until docker info; do
     echo "Waiting for docker to start..."
