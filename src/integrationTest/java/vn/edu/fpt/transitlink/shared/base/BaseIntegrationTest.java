@@ -21,7 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @ActiveProfiles("test")
 public abstract class BaseIntegrationTest {
     @LocalServerPort
-    protected static int port;
+    protected int port;
 
     @Autowired
     protected TestRestTemplate restTemplate;
@@ -35,19 +35,10 @@ public abstract class BaseIntegrationTest {
 
     @Container
     public static final RedisContainer redis = new RedisContainer("redis:8.0.3")
-            .withExposedPorts(6379)
-            .withReuse(true);
+            .withExposedPorts(6379);
 
     @DynamicPropertySource
     public static void configureProperties(DynamicPropertyRegistry registry) {
-        // Đảm bảo containers được start trước
-        if (!postgres.isRunning()) {
-            postgres.start();
-        }
-        if (!redis.isRunning()) {
-            redis.start();
-        }
-
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
@@ -58,7 +49,6 @@ public abstract class BaseIntegrationTest {
 
         registry.add("app.storage.provider", () -> "local");
         registry.add("app.storage.root-path", () -> "./test-data");
-        registry.add("app.storage.local.url", () -> "http://localhost:" + port + "/files");
     }
 
     protected String getBaseUrl() {
@@ -67,6 +57,7 @@ public abstract class BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        System.setProperty("app.storage.local.url", "http://localhost:" + port + "/files");
         // Common setup logic
     }
 
