@@ -113,7 +113,7 @@ stages:
 .ssh_commands: &ssh_commands
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
-  - cp $SSH_PRIVATE_KEY ~/.ssh/id_rsa
+  - echo $SSH_PRIVATE_KEY > ~/.ssh/id_rsa
   - chmod 600 ~/.ssh/id_rsa
   - ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
   - chmod 644 ~/.ssh/known_hosts
@@ -156,7 +156,7 @@ unit-tests:
     paths:
       - build/jacoco/unitTest.exec
       - build/test-results/unitTest/
-      - build/reports/tests/unitTest
+      - build/reports/tests/unitTest/
 
 integration-tests:
   stage: test
@@ -188,6 +188,7 @@ integration-tests:
   <<: *test_artifacts
   artifacts:
     paths:
+      - .gradle/
       - build/jacoco/integrationTest.exec
       - build/test-results/integrationTest/
       - build/reports/tests/integrationTest/
@@ -211,8 +212,8 @@ generate_report:
   artifacts:
     when: always
     paths:
-      - build/reports/jacoco/combined
-      - build/reports/jacoco/jacocoCombinedTestReport
+      - .gradle/
+      - build/
     expire_in: 1 week
 
 push-report:
