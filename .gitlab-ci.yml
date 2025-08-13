@@ -150,7 +150,7 @@ unit-tests:
   image: gradle:${GRADLE_VERSION}
   <<: *rules_feat_fix_hotfix_main_dev
   script:
-    - gradle clean unitTest --no-daemon --info
+    - gradle clean unitTest --no-daemon
   <<: *test_artifacts
   artifacts:
     paths:
@@ -177,11 +177,11 @@ integration-tests:
         echo "Docker not ready yet..."
         sleep 2
       done
-    - export TESTCONTAINERS_HOST_OVERRIDE=$(ip route | awk '/default/ { print $3 }')
+    - export TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
     - chmod +x scripts/integration-test-setup.sh
     - bash ./scripts/integration-test-setup.sh
   script:
-    - gradle integrationTest --no-daemon --info
+    - gradle integrationTest --no-daemon
   after_script:
     - chmod +x scripts/docker-cleanup.sh
     - bash ./scripts/docker-cleanup.sh
@@ -207,7 +207,7 @@ generate_report:
       artifacts: true
   <<: *rules_feat_fix_hotfix_main_dev
   script:
-    - gradle jacocoCombinedTestReport --no-daemon --info
+    - gradle jacocoCombinedTestReport --no-daemon
   artifacts:
     when: always
     paths:
@@ -225,7 +225,7 @@ push-report:
   before_script:
     - echo "$SONAR_TOKEN"
   script:
-    - gradle sonar --no-daemon --info
+    - gradle sonar --no-daemon
 
 create_merge_dev:
   stage: merge
@@ -289,7 +289,7 @@ build-and-push-image:
     - job: "integration-tests"
       artifacts: false
   before_script:
-    - export TESTCONTAINERS_HOST_OVERRIDE=$(ip route | awk '/default/ { print $3 }')
+    - export TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
     - chmod +x scripts/build-and-push-image.sh
   script:
     - bash ./scripts/build-and-push-image.sh
