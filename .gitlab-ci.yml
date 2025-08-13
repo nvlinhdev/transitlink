@@ -177,6 +177,7 @@ integration-tests:
         echo "Docker not ready yet..."
         sleep 2
       done
+    - export TESTCONTAINERS_HOST_OVERRIDE=$(ip route | awk '/default/ { print $3 }')
     - chmod +x scripts/integration-test-setup.sh
     - bash ./scripts/integration-test-setup.sh
   script:
@@ -288,6 +289,7 @@ build-and-push-image:
     - job: "integration-tests"
       artifacts: false
   before_script:
+    - export TESTCONTAINERS_HOST_OVERRIDE=$(ip route | awk '/default/ { print $3 }')
     - chmod +x scripts/build-and-push-image.sh
   script:
     - bash ./scripts/build-and-push-image.sh
