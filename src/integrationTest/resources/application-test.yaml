@@ -1,0 +1,43 @@
+server:
+  port: 0
+
+spring:
+  jackson:
+    time-zone: UTC
+  datasource:
+    hikari:
+      max-lifetime: 30000
+      idle-timeout: 10000
+      minimum-idle: 0
+      maximum-pool-size: 5
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate.format_sql: true
+      hibernate.jdbc.time_zone: UTC
+      hibernate.jdbc.batch_size: 20
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+management:
+  endpoints:
+    access:
+      default: none
+  endpoint:
+    health:
+      access: none
+    info:
+      access: none
+
+logging:
+  level:
+    root: WARN

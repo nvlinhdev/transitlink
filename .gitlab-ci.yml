@@ -113,7 +113,7 @@ stages:
 .ssh_commands: &ssh_commands
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
-  - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+  - echo "$SSH_PRIVATE_KEY_BASE64" | base64 -d > ~/.ssh/id_rsa
   - chmod 600 ~/.ssh/id_rsa
   - ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
   - chmod 644 ~/.ssh/known_hosts
@@ -129,11 +129,6 @@ stages:
     reports:
       junit:
         - build/test-results/*/TEST-*.xml
-
-.docker_config: &docker_config
-  variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
-    DOCKER_DRIVER: overlay2
 
 .backup_config: &backup_config
   stage: backup
@@ -161,14 +156,12 @@ unit-tests:
     paths:
       - build/jacoco/unitTest.exec
       - build/test-results/unitTest/
-      - build/reports/tests/unitTest
+      - build/reports/tests/unitTest/
 
 integration-tests:
   stage: test
   image: $DOCKER_JAVA_IMAGE
-  <<: *docker_config
   variables:
-    TESTCONTAINERS_HOST_OVERRIDE: 172.17.0.1
     TESTCONTAINERS_RYUK_DISABLED: "true"
     TESTCONTAINERS_CHECKS_DISABLE: "true"
     GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
@@ -184,6 +177,7 @@ integration-tests:
         echo "Docker not ready yet..."
         sleep 2
       done
+    - export TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
     - chmod +x scripts/integration-test-setup.sh
     - bash ./scripts/integration-test-setup.sh
   script:
@@ -194,6 +188,7 @@ integration-tests:
   <<: *test_artifacts
   artifacts:
     paths:
+      - .gradle/
       - build/jacoco/integrationTest.exec
       - build/test-results/integrationTest/
       - build/reports/tests/integrationTest/
@@ -217,8 +212,8 @@ generate_report:
   artifacts:
     when: always
     paths:
-      - build/reports/jacoco/combined
-      - build/reports/jacoco/jacocoCombinedTestReport
+      - .gradle/
+      - build/
     expire_in: 1 week
 
 push-report:
@@ -231,7 +226,7 @@ push-report:
   before_script:
     - echo "$SONAR_TOKEN"
   script:
-    - gradle sonar
+    - gradle sonar --no-daemon
 
 create_merge_dev:
   stage: merge
@@ -288,7 +283,6 @@ approve_merge_request:
 build-and-push-image:
   stage: docker-publish
   image: $DOCKER_BASH_IMAGE
-  <<: *docker_config
   <<: *rules_main_dev
   needs:
     - job: "unit-tests"
@@ -296,6 +290,7 @@ build-and-push-image:
     - job: "integration-tests"
       artifacts: false
   before_script:
+    - export TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
     - chmod +x scripts/build-and-push-image.sh
   script:
     - bash ./scripts/build-and-push-image.sh
