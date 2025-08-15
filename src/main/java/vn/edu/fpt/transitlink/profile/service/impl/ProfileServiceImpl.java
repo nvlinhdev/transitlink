@@ -37,17 +37,17 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
-    public UserProfileDTO createProfile(CreateProfileRequest request, Principal principal) {
+    public UserProfileDTO createProfile(UserProfileDTO profileData, Principal principal) {
         return null;
     }
 
     @Override
-    public UserProfileDTO updateBasicInfo(UpdateBasicInfoRequest request, Principal principal) {
+    public UserProfileDTO updateBasicInfo(UserProfileDTO profileData, Principal principal) {
         return null;
     }
 
     @Override
-    public UserProfileDTO updatePhoneNumber(UpdatePhoneNumberRequest request, Principal principal) {
+    public UserProfileDTO updatePhoneNumber(String token, Principal principal) {
         return null;
     }
 
