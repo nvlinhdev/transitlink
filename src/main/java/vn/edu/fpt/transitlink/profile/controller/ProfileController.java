@@ -16,7 +16,7 @@ import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/profiles")
-public class ProfileController {
+public class  ProfileController {
     private final ProfileService service;
 
     public ProfileController(ProfileService service) {
