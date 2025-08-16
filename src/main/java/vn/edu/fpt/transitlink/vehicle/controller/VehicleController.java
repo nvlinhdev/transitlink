@@ -1,4 +1,4 @@
-package vn.edu.fpt.transitlink.driver.controller;
+package vn.edu.fpt.transitlink.vehicle.controller;
 
 
 import org.springframework.http.HttpStatus;
@@ -7,39 +7,39 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
-import vn.edu.fpt.transitlink.driver.dto.DriverDTO;
-import vn.edu.fpt.transitlink.driver.service.DriverService;
 import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
+import vn.edu.fpt.transitlink.vehicle.dto.VehicleDTO;
+import vn.edu.fpt.transitlink.vehicle.service.VehicleService;
 
-@RestController("/api/drivers")
-public class DriverController {
+@RestController("/api/vehicles")
+public class VehicleController {
 
-    private final DriverService driverService;
+    private final VehicleService vehicleService;
 
-    public DriverController(DriverService driverService) {
-        this.driverService = driverService;
+    public VehicleController(VehicleService vehicleService) {
+        this.vehicleService = vehicleService;
     }
 
     @PostMapping
-    public ResponseEntity<StandardResponse<DriverDTO>> enterDriverData(
-            // @Valid @RequestBody EnterDriverDataRequest request,
+    public ResponseEntity<StandardResponse<VehicleDTO>> enterVehicleData(
+            // @Valid @RequestBody EnterVehicleDataRequest request,
             // Principal principal
     ) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 
     @PostMapping("/import")
-    public ResponseEntity<StandardResponse<Void>> importDriverData() {
+    public ResponseEntity<StandardResponse<Void>> importVehicleData() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 
     @GetMapping
-    public ResponseEntity<StandardResponse<Void>> viewDriverList() {
+    public ResponseEntity<StandardResponse<Void>> viewVehicleList() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<StandardResponse<Void>> deleteDriverData() {
+    public ResponseEntity<StandardResponse<Void>> deleteVehicleData() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 }

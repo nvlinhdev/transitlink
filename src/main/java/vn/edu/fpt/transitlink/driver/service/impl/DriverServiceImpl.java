@@ -5,8 +5,6 @@ import vn.edu.fpt.transitlink.driver.dto.DriverDTO;
 import vn.edu.fpt.transitlink.driver.mapper.DriverMapper;
 import vn.edu.fpt.transitlink.driver.repository.DriverRepository;
 import vn.edu.fpt.transitlink.driver.service.DriverService;
-import vn.edu.fpt.transitlink.passenger.mapper.PassengerMapper;
-import vn.edu.fpt.transitlink.passenger.repository.PassengerRepository;
 
 import java.security.Principal;
 import java.util.UUID;

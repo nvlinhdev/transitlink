@@ -1,13 +1,10 @@
 package vn.edu.fpt.transitlink.passenger.controller;
 
-import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.fpt.transitlink.passenger.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.passenger.service.PassengerService;
-import vn.edu.fpt.transitlink.profile.dto.CreateProfileRequest;
-import vn.edu.fpt.transitlink.profile.dto.UserProfileDTO;
 import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 
 import java.security.Principal;
