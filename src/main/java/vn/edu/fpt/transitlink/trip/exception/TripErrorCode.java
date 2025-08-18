@@ -8,9 +8,7 @@ public enum TripErrorCode {
 
     //Stop
 
-    //DriverLocations
-
-    //PassengerLocations
+    //PassengerJourney
 
     //Routes
     ROUTE_NOT_FOUND("ROUTE_NOT_FOUND", "Route not found", HttpStatus.NOT_FOUND),
