@@ -5,7 +5,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import lombok.*;
 import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
-import vn.edu.fpt.transitlink.shared.base.BaseUserAuditableEntity;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -18,10 +17,13 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode(callSuper = true)
 @Entity
-public class Dropoff extends BaseSoftDeletableEntity {
+public class Stop extends BaseSoftDeletableEntity {
     @Id
     @GeneratedValue
-    private UUID tripId;
-    private UUID passengerId;
-    private OffsetDateTime confirmedAt;
+    private UUID routeId;
+    private UUID placeId;
+    private int sequence;
+    private OffsetDateTime plannedDepartureTime;
+    private OffsetDateTime actualDepartureTime;
+
 }

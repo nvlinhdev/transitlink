@@ -5,7 +5,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import lombok.*;
 import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
-import vn.edu.fpt.transitlink.shared.base.BaseTimeAuditableEntity;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -18,10 +17,18 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode(callSuper = true)
 @Entity
-public class TripCheckin extends BaseSoftDeletableEntity {
+public class Route extends BaseSoftDeletableEntity {
     @Id
     @GeneratedValue
-    private UUID triId;
-    private UUID passengerId;
-    private OffsetDateTime time;
+    private UUID Id;
+    private UUID driverId;
+    private UUID vehicleId;
+    private String name;
+    private float estimatedDistanceKm;
+    private float estimatedDurationMin;
+    private OffsetDateTime  plannedDepartureTime;
+    private OffsetDateTime  checkinTime;
+    private OffsetDateTime  plannedArrivalTime;
+    private OffsetDateTime checkoutTime;
+    private String status;
 }

@@ -6,24 +6,21 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
-import vn.edu.fpt.transitlink.fleet.service.FleetService;
-import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 import vn.edu.fpt.transitlink.fleet.dto.VehicleDTO;
+import vn.edu.fpt.transitlink.fleet.service.VehicleService;
+import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 
-@RestController("/api/fleet")
-public class FleetController {
+@RestController("/api/fleet/vehicles")
+public class VehiclController {
 
-    private final FleetService fleetService;
+    private final VehicleService vehicleService;
 
-    public FleetController(FleetService fleetService) {
-        this.fleetService = fleetService;
+    public VehiclController(VehicleService vehicleService) {
+        this.vehicleService = vehicleService;
     }
 
-    //Depots
 
-
-    //Vehicle
-    @PostMapping("/vehicles")
+    @PostMapping
     public ResponseEntity<StandardResponse<VehicleDTO>> enterVehicleData(
             // @Valid @RequestBody EnterVehicleDataRequest request,
             // Principal principal
@@ -31,17 +28,17 @@ public class FleetController {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 
-    @PostMapping("/vehicles/import")
+    @PostMapping("/import")
     public ResponseEntity<StandardResponse<Void>> importVehicleData() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 
-    @GetMapping("/vehicles")
+    @GetMapping
     public ResponseEntity<StandardResponse<Void>> viewVehicleList() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 
-    @DeleteMapping("/vehicles/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<StandardResponse<Void>> deleteVehicleData() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
