@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import org.hibernate.validator.constraints.URL;
-import vn.edu.fpt.transitlink.user.entity.Gender;
+import vn.edu.fpt.transitlink.auth.entity.Gender;
 
 import java.time.LocalDate;
 

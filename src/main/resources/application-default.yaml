@@ -38,18 +38,38 @@ spring:
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}
-          jwk-set-uri: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/certs
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USER}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
 
   servlet:
     multipart:
       max-file-size: ${TRANSITLINK_MAX_FILE_SIZE:"50MB"}
       max-request-size: ${TRANSITLINK_MAX_REQUEST_SIZE:"50MB"}
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
 management:
   endpoints:
     web:
@@ -81,6 +101,9 @@ app:
       - /files/**
       - /actuator/health
       - /actuator/info
+      - /login/oauth2/**
+      - /api/auth/**
+      - /oauth2/**
     cors:
       allowed-origins:
         - "http://localhost:4200"
@@ -96,6 +119,15 @@ app:
       allowed-headers:
         - "*"
       allow-credentials: true
+    jwt:
+      secret: ${JWT_SECRET}
+      access-token:
+        expiration: 900000 # 15 phút (ms)
+      refresh-token:
+        expiration: 604800000 # 7 ngày (ms)
+    oauth2:
+      redirect-uris:
+        - http://localhost:4200/oauth/callback
 
 # SpringDoc configuration for API documentation
 springdoc:
@@ -104,11 +136,6 @@ springdoc:
 
   swagger-ui:
     enabled: true # change false to disable Swagger UI on production
-
-  # when api-doc and swagger-ui are disabled, all of these properties can be ignored
-    oauth:
-      client-id: web-app
-      use-pkce-with-authorization-code-grant: true
 
   info:
     title: TransitLink API
@@ -121,15 +148,6 @@ springdoc:
     - url: http://api.transitlink.fpt.edu.vn
       description: Containerized depvloyment server
 
-  oauth:
-    authorization-url: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/auth
-    token-url: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/token
-    refresh-url: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/token
-    scopes:
-      openid: OpenID scope
-      email: User email
-      offline_access: Offline access (refresh token)
-
   groups:
-    - group: storage
-      paths: /api/storage/**
+    - group: auth
+      paths: /api/auth/**

@@ -1,5 +1,6 @@
 package vn.edu.fpt.transitlink.fleet.service.impl;
 
+import org.springframework.stereotype.Service;
 import vn.edu.fpt.transitlink.fleet.dto.VehicleDTO;
 import vn.edu.fpt.transitlink.fleet.mapper.DepotMapper;
 import vn.edu.fpt.transitlink.fleet.repository.DepotRepository;
@@ -8,6 +9,7 @@ import vn.edu.fpt.transitlink.fleet.service.VehicleService;
 import java.security.Principal;
 import java.util.UUID;
 
+@Service
 public class VehicleServiceImpl implements VehicleService {
 
     private final DepotMapper depotMapper;

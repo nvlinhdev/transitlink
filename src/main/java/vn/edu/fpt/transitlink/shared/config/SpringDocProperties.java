@@ -11,15 +11,8 @@ import java.util.Map;
 public record SpringDocProperties(
         Info info,
         List<Server> servers,
-        Oauth oauth,
         List<Group> groups
 ) {
-    public record Oauth(
-            String authorizationUrl,
-            String tokenUrl,
-            String refreshUrl,
-            Map<String, String> scopes
-    ) {}
 
     public record Group(
             String group,

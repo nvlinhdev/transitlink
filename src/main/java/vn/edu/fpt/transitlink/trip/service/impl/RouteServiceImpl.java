@@ -23,7 +23,7 @@ public class RouteServiceImpl implements RouteService {
 
 
     @Override
-    public RouteDTO createRouteData(RouteDTO routeData) {
+    public RouteDTO createRouteData() {
         return null;
     }
 

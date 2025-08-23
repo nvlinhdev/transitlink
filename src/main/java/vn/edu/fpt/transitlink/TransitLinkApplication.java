@@ -3,6 +3,7 @@ package vn.edu.fpt.transitlink;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableAsync;
 import vn.edu.fpt.transitlink.shared.config.AppProperties;
 import vn.edu.fpt.transitlink.shared.config.SpringDocProperties;
 
@@ -11,6 +12,7 @@ import vn.edu.fpt.transitlink.shared.config.SpringDocProperties;
         SpringDocProperties.class
 })
 @SpringBootApplication
+@EnableAsync
 public class TransitLinkApplication {
 
     public static void main(String[] args) {

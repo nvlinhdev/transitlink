@@ -24,9 +24,6 @@ public record PaginatedResponse<T>(
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss 'UTC'")
         String timestamp,
 
-        @Schema(description = "HTTP status code")
-        int statusCode,
-
         // Pagination metadata
         @Schema(description = "Current page number (0-based)")
         int page,
@@ -59,7 +56,6 @@ public record PaginatedResponse<T>(
                 "Success",
                 data,
                 TimeUtil.now(),
-                HttpStatus.OK.value(),
                 page,
                 size,
                 totalElements,
@@ -78,7 +74,6 @@ public record PaginatedResponse<T>(
                 message,
                 data,
                 TimeUtil.now(),
-                HttpStatus.OK.value(),
                 page,
                 size,
                 totalElements,
@@ -115,7 +110,6 @@ public record PaginatedResponse<T>(
                 "Success",
                 page.getContent(),
                 TimeUtil.now(),
-                HttpStatus.OK.value(),
                 page.getNumber(),
                 page.getSize(),
                 page.getTotalElements(),
@@ -134,7 +128,6 @@ public record PaginatedResponse<T>(
                 message,
                 page.getContent(),
                 TimeUtil.now(),
-                HttpStatus.OK.value(),
                 page.getNumber(),
                 page.getSize(),
                 page.getTotalElements(),

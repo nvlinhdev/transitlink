@@ -21,10 +21,6 @@ public record ErrorResponse(
 
         @Schema(description = "The URI path where the error occurred")
         String path,
-
-        @Schema(description = "HTTP status code")
-        int statusCode,
-
         @Schema(description = "Timestamp when the error occurred")
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss 'UTC'")
         String timestamp,
@@ -33,13 +29,13 @@ public record ErrorResponse(
         List<ValidationError> validationErrors
 ) {
     // Constructor cơ bản - không có validation errors
-    public ErrorResponse(String message, String error, String path, int statusCode) {
-        this(false, message, error, path, statusCode, TimeUtil.now(), null);
+    public ErrorResponse(String message, String error, String path) {
+        this(false, message, error, path, TimeUtil.now(), null);
     }
 
     // Constructor với validation errors
-    public ErrorResponse(String message, String error, String path, int statusCode,
+    public ErrorResponse(String message, String error, String path,
                          List<ValidationError> validationErrors) {
-        this(false, message, error, path, statusCode, TimeUtil.now(), validationErrors);
+        this(false, message, error, path, TimeUtil.now(), validationErrors);
     }
 }

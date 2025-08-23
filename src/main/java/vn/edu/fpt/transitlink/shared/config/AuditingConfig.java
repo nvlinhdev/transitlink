@@ -18,6 +18,6 @@ public class AuditingConfig {
     @Bean
     @Profile("!test")
     public AuditorAware<UUID> auditorProvider() {
-        return new KeycloakAuditorAware();
+        return new JwtAuditorAware();
     }
 }

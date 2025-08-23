@@ -43,8 +43,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getMessage(),
                 ex.getErrorCode().getCode(),
-                request.getRequestURI(),
-                ex.getErrorCode().getHttpStatus().value()
+                request.getRequestURI()
         );
 
         return ResponseEntity.status(ex.getErrorCode().getHttpStatus()).body(errorResponse);
@@ -60,8 +59,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getMessage(),
                 ex.getErrorCode().getCode(),
-                request.getRequestURI(),
-                ex.getErrorCode().getHttpStatus().value()
+                request.getRequestURI()
         );
 
         return ResponseEntity.status(ex.getErrorCode().getHttpStatus()).body(errorResponse);
@@ -77,8 +75,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getMessage(),
                 ex.getErrorCode().getCode(),
-                request.getRequestURI(),
-                ex.getErrorCode().getHttpStatus().value()
+                request.getRequestURI()
         );
 
         return ResponseEntity.status(ex.getErrorCode().getHttpStatus()).body(errorResponse);
@@ -95,8 +92,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 "Unexpected exception occurred",
                 ex.getClass().getSimpleName(),
-                request.getRequestURI(),
-                HttpStatus.INTERNAL_SERVER_ERROR.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -132,7 +128,6 @@ public class GlobalExceptionHandler {
                 "Validation failed: " + errorSummary,
                 "MethodArgumentNotValidException",
                 request.getRequestURI(),
-                HttpStatus.BAD_REQUEST.value(),
                 validationErrors
         );
 
@@ -167,7 +162,6 @@ public class GlobalExceptionHandler {
                 "Validation failed: " + errorSummary,
                 "ConstraintViolationException",
                 request.getRequestURI(),
-                HttpStatus.BAD_REQUEST.value(),
                 validationErrors
         );
 
@@ -186,8 +180,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 "Access denied - insufficient permissions",
                 "AccessDeniedException",
-                request.getRequestURI(),
-                HttpStatus.FORBIDDEN.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
     }
@@ -204,8 +197,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getMessage() != null ? ex.getMessage() : "Authorization denied",
                 "AuthorizationDeniedException",
-                request.getRequestURI(),
-                HttpStatus.FORBIDDEN.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
     }
@@ -227,8 +219,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 message,
                 "HttpRequestMethodNotSupportedException",
-                request.getRequestURI(),
-                HttpStatus.METHOD_NOT_ALLOWED.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.METHOD_NOT_ALLOWED);
     }
@@ -251,8 +242,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 message,
                 "HttpMessageNotReadableException",
-                request.getRequestURI(),
-                HttpStatus.BAD_REQUEST.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -272,8 +262,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 message,
                 "MissingServletRequestParameterException",
-                request.getRequestURI(),
-                HttpStatus.BAD_REQUEST.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -295,8 +284,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 message,
                 "TypeMismatchException",
-                request.getRequestURI(),
-                HttpStatus.BAD_REQUEST.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -312,8 +300,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getMessage(),
                 "IllegalArgumentException",
-                request.getRequestURI(),
-                HttpStatus.BAD_REQUEST.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -334,8 +321,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 message,
                 "DataIntegrityViolationException",
-                request.getRequestURI(),
-                HttpStatus.CONFLICT.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
@@ -356,8 +342,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 message,
                 "HttpMediaTypeNotSupportedException",
-                request.getRequestURI(),
-                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value()
+                request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     }

@@ -83,18 +83,34 @@ dependencies {
     val mapstructVersion = "1.6.3"
     val firebaseAdminVersion = "9.5.0"
     val mapstructLombokBindingVersion = "0.2.0"
+    val jwtVersion = "0.12.7"
+    val springCrytoVersion = "6.5.3"
 
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    // mail sending support
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
+
     // Modulith
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jpa")
+    // Jwt
+    implementation("io.jsonwebtoken:jjwt-api:${jwtVersion}")
+    implementation("io.jsonwebtoken:jjwt-impl:${jwtVersion}")
+    implementation("io.jsonwebtoken:jjwt-jackson:${jwtVersion}")
+    // Oauth2
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("com.google.api-client:google-api-client:2.8.1")
+
+    // password encoder
+    implementation("org.springframework.security:spring-security-crypto:${springCrytoVersion}")
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openApiVersion")
     // Firebase
@@ -105,6 +121,8 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
     // Devtools
     developmentOnly("org.springframework.boot:spring-boot-devtools")
+    // jackson datatypes for JSR-310 (Java 8 Date/Time API)
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.2")
     // Lombok + Annotation Processors
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

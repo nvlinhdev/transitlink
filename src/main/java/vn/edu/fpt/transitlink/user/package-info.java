@@ -4,6 +4,7 @@
         type = ApplicationModule.Type.CLOSED,
         allowedDependencies = {
                 "shared",
+                "auth",
         }
 )
 
