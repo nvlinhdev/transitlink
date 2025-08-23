@@ -21,9 +21,8 @@ public class RouteServiceImpl implements RouteService {
         this.routeRepository = routeRepository;
     }
 
-
     @Override
-    public RouteDTO createRouteData() {
+    public RouteDTO createRouteData(RouteDTO routeData) {
         return null;
     }
 
