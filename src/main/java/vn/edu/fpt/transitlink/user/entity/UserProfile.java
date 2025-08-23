@@ -2,7 +2,6 @@ package vn.edu.fpt.transitlink.user.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import vn.edu.fpt.transitlink.profile.entity.Gender;
 import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
 
 import java.time.LocalDate;

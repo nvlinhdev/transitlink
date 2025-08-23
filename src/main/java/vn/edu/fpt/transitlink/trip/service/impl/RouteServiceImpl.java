@@ -1,7 +1,7 @@
 package vn.edu.fpt.transitlink.trip.service.impl;
 
 import org.springframework.stereotype.Service;
-import vn.edu.fpt.transitlink.route.dto.RouteDTO;
+import vn.edu.fpt.transitlink.trip.dto.RouteDTO;
 import vn.edu.fpt.transitlink.trip.mapper.RouteMapper;
 import vn.edu.fpt.transitlink.trip.repository.RouteRepository;
 import vn.edu.fpt.transitlink.trip.service.RouteService;

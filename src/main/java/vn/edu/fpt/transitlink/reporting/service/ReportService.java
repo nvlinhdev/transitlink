@@ -1,14 +1,13 @@
 package vn.edu.fpt.transitlink.reporting.service;
 
-import vn.edu.fpt.transitlink.driver.dto.DriverDTO;
-import vn.edu.fpt.transitlink.passenger.dto.PassengerDTO;
+import vn.edu.fpt.transitlink.user.dto.DriverDTO;
+import vn.edu.fpt.transitlink.user.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.reporting.dto.ReportDTO;
-import vn.edu.fpt.transitlink.schedule.dto.ScheduleDTO;
-import vn.edu.fpt.transitlink.vehicle.dto.VehicleDTO;
+import vn.edu.fpt.transitlink.fleet.dto.VehicleDTO;
 
 public interface ReportService {
 
-    ReportDTO generateTripReport(ReportDTO reportData, ScheduleDTO scheduleData);
+    ReportDTO generateTripReport(ReportDTO reportData);
     ReportDTO generatePassengerReport (ReportDTO reportData, PassengerDTO passengerData);
     ReportDTO generateDriverReport (ReportDTO reportData, DriverDTO driverData);
     ReportDTO generateVehicleUsageReport (ReportDTO reportData, VehicleDTO vehicleData);

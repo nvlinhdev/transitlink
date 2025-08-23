@@ -1,6 +1,6 @@
 package vn.edu.fpt.transitlink.trip.service;
 
-import vn.edu.fpt.transitlink.route.dto.RouteDTO;
+import vn.edu.fpt.transitlink.trip.dto.RouteDTO;
 
 import java.util.UUID;
 

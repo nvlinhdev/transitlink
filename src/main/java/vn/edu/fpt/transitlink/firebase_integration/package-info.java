@@ -4,7 +4,6 @@
         type = ApplicationModule.Type.CLOSED,
         allowedDependencies = {
                 "shared",
-                "profile"
         }
 )
 package vn.edu.fpt.transitlink.firebase_integration;

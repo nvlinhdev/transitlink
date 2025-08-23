@@ -1,14 +1,13 @@
 package vn.edu.fpt.transitlink.reporting.service.impl;
 
 import org.springframework.stereotype.Service;
-import vn.edu.fpt.transitlink.driver.dto.DriverDTO;
-import vn.edu.fpt.transitlink.passenger.dto.PassengerDTO;
+import vn.edu.fpt.transitlink.user.dto.DriverDTO;
+import vn.edu.fpt.transitlink.user.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.reporting.dto.ReportDTO;
 import vn.edu.fpt.transitlink.reporting.mapper.ReportMapper;
 import vn.edu.fpt.transitlink.reporting.repository.ReportRepository;
 import vn.edu.fpt.transitlink.reporting.service.ReportService;
-import vn.edu.fpt.transitlink.schedule.dto.ScheduleDTO;
-import vn.edu.fpt.transitlink.vehicle.dto.VehicleDTO;
+import vn.edu.fpt.transitlink.fleet.dto.VehicleDTO;
 
 @Service
 public class ReportServiceImpl implements ReportService {
@@ -23,7 +22,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public ReportDTO generateTripReport(ReportDTO reportData, ScheduleDTO scheduleData) {
+    public ReportDTO generateTripReport(ReportDTO reportData) {
         return null;
     }
 
