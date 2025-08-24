@@ -39,13 +39,17 @@ spring:
       password: ${REDIS_PASSWORD}
 
   mail:
+    enabled: true
     host: ${SMTP_HOST}
     port: ${SMTP_PORT}
     username: ${SMTP_USER}
     password: ${SMTP_PASSWORD}
+    from: ${SMTP_FROM_EMAIL}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
+      mail.smtp.connectionpoolsize: 10
+      mail.smtp.connectiontimeout: 5000
 
   thymeleaf:
     prefix: classpath:/templates/
@@ -106,10 +110,11 @@ app:
       - /oauth2/**
     cors:
       allowed-origins:
-        - "http://localhost:4200"
-        - "http://localhost:8888"
-        - "http://api.transitlink.fpt.edu.vn"
-        - "https://api.transitlink.fpt.edu.vn"
+        - "http://localhost:4200/"
+        - "http://localhost:8888/"
+        - "http://api.transitlink.fpt.edu.vn/"
+        - "https://api.transitlink.fpt.edu.vn/"
+        - "https://api.transitlink.dpdns.org/"
       allowed-methods:
         - GET
         - POST
@@ -128,6 +133,13 @@ app:
     oauth2:
       redirect-uris:
         - http://localhost:4200/oauth/callback
+    verification:
+      otp-expiration-minutes: 5
+      max-attempts: 5
+      rate-limit-minutes: 1
+    frontend:
+      base-url: "http://localhost:4200"
+
 
 # SpringDoc configuration for API documentation
 springdoc:
@@ -151,3 +163,5 @@ springdoc:
   groups:
     - group: auth
       paths: /api/auth/**
+    - group: storage
+      paths: /api/storage/**

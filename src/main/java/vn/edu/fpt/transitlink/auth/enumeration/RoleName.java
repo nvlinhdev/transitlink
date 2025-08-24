@@ -1,4 +1,4 @@
-package vn.edu.fpt.transitlink.auth.entity;
+package vn.edu.fpt.transitlink.auth.enumeration;
 
 public enum RoleName {
     MANAGER,

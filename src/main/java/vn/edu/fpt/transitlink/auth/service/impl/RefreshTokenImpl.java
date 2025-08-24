@@ -2,15 +2,14 @@ package vn.edu.fpt.transitlink.auth.service.impl;
 
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import vn.edu.fpt.transitlink.auth.entity.Account;
 import vn.edu.fpt.transitlink.auth.entity.RefreshToken;
-import vn.edu.fpt.transitlink.auth.exception.AuthErrorCode;
+import vn.edu.fpt.transitlink.auth.enumeration.AuthErrorCode;
 import vn.edu.fpt.transitlink.auth.repository.AccountRepository;
 import vn.edu.fpt.transitlink.auth.repository.RefreshTokenRepository;
 import vn.edu.fpt.transitlink.auth.security.JwtService;
-import vn.edu.fpt.transitlink.shared.config.AppProperties;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
 import vn.edu.fpt.transitlink.auth.service.RefreshTokenService;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
@@ -29,6 +28,7 @@ public class RefreshTokenImpl implements RefreshTokenService {
 
     private final JwtService jwtService;
 
+    @Override
     public RefreshToken createRefreshToken(CustomUserPrincipal userPrincipal) {
         Account account = accountRepository.findByEmail(userPrincipal.getUsername())
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND,
@@ -47,11 +47,12 @@ public class RefreshTokenImpl implements RefreshTokenService {
 
         return refreshTokenRepository.save(refreshToken);
     }
-
+    @Override
     public Optional<RefreshToken> findByToken(String token) {
         return refreshTokenRepository.findByToken(token);
     }
 
+    @Override
     public RefreshToken verifyExpiration(RefreshToken token) {
         if (token.isExpired()) {
             refreshTokenRepository.delete(token);
@@ -60,6 +61,7 @@ public class RefreshTokenImpl implements RefreshTokenService {
         return token;
     }
 
+    @Override
     public void deleteByToken(String token) {
         refreshTokenRepository.deleteByToken(token);
     }

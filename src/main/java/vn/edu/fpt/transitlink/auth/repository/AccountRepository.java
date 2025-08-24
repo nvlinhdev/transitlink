@@ -12,9 +12,7 @@ import java.util.UUID;
 
 public interface AccountRepository extends SoftDeletableRepository<Account, UUID> {
     Optional<Account> findByEmail(String email);
-    Optional<Account> findByPhoneNumber(String phoneNumber);
     boolean existsByEmail(String email);
-    boolean existsByPhoneNumber(String phoneNumber);
 
     @Override
     @Modifying

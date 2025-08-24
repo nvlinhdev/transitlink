@@ -4,7 +4,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.validation.constraints.*;
 import org.hibernate.validator.constraints.URL;
-import vn.edu.fpt.transitlink.auth.entity.Gender;
+import vn.edu.fpt.transitlink.auth.enumeration.Gender;
 
 import java.time.LocalDate;
 

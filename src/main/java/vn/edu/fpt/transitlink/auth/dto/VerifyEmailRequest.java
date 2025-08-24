@@ -1,15 +1,18 @@
 package vn.edu.fpt.transitlink.auth.dto;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import vn.edu.fpt.transitlink.auth.enumeration.VerifyMethod;
 
 public record VerifyEmailRequest(
-        @NotBlank(message = "Email is required")
+        @NotNull(message = "Method is required")
+        VerifyMethod method,
         @Email(message = "Email should be valid")
         String email,
-
-        @NotBlank(message = "OTP is required")
-        @Pattern(regexp = "^[0-9]{6}$", message = "OTP must be 6 digits")
-        String otp
+        @Pattern(regexp = "^\\d{6}$", message = "OTP must be 6 digits")
+        String otp,
+        @Size(max = 128, message = "Token must not exceed 128 characters")
+        String token
 ) {}

@@ -7,7 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import vn.edu.fpt.transitlink.auth.entity.Account;
 import vn.edu.fpt.transitlink.auth.entity.Role;
-import vn.edu.fpt.transitlink.auth.entity.RoleName;
+import vn.edu.fpt.transitlink.auth.enumeration.RoleName;
 import vn.edu.fpt.transitlink.auth.repository.AccountRepository;
 import vn.edu.fpt.transitlink.auth.repository.RoleRepository;
 import vn.edu.fpt.transitlink.auth.security.userdetails.CustomUserDetailsService;

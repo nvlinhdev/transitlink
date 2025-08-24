@@ -1,10 +1,12 @@
 package vn.edu.fpt.transitlink.auth.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import vn.edu.fpt.transitlink.auth.enumeration.Gender;
 import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
 
 import java.time.LocalDate;
@@ -40,5 +42,6 @@ public class Account extends BaseSoftDeletableEntity {
     @JoinTable(name = "account_role_mapping",
             joinColumns = @JoinColumn(name = "account_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @JsonManagedReference
     private Set<Role> roles;
 }

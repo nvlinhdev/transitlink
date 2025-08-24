@@ -7,7 +7,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import vn.edu.fpt.transitlink.auth.exception.AuthErrorCode;
+import vn.edu.fpt.transitlink.auth.enumeration.AuthErrorCode;
 import vn.edu.fpt.transitlink.auth.service.GoogleTokenVerifierService;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 

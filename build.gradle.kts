@@ -85,6 +85,7 @@ dependencies {
     val mapstructLombokBindingVersion = "0.2.0"
     val jwtVersion = "0.12.7"
     val springCrytoVersion = "6.5.3"
+    val spatialVersion = "6.6.18.Final"
 
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -108,13 +109,14 @@ dependencies {
     // Oauth2
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("com.google.api-client:google-api-client:2.8.1")
-
     // password encoder
     implementation("org.springframework.security:spring-security-crypto:${springCrytoVersion}")
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openApiVersion")
     // Firebase
     implementation("com.google.firebase:firebase-admin:$firebaseAdminVersion")
+    // Hibernate Spatial
+    implementation("org.hibernate.orm:hibernate-spatial:$spatialVersion")
     // MapStruct
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
     // PostgreSQL

@@ -7,7 +7,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import vn.edu.fpt.transitlink.auth.entity.Account;
-import vn.edu.fpt.transitlink.auth.exception.AuthErrorCode;
+import vn.edu.fpt.transitlink.auth.enumeration.AuthErrorCode;
 import vn.edu.fpt.transitlink.auth.repository.AccountRepository;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
