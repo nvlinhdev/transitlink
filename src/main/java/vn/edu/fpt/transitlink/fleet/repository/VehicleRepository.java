@@ -14,6 +14,6 @@ public interface VehicleRepository extends SoftDeletableRepository<Vehicle, UUID
     @Override
     @Modifying
     @Transactional
-    @Query("DELETE FROM Vehicle v WHERE v.deleted = true AND v.deletedAt < :threshold")
+    @Query("DELETE FROM Vehicle v WHERE v.isDeleted = true AND v.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
 }

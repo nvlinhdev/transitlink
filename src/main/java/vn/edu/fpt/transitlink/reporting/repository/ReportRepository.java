@@ -14,6 +14,6 @@ public interface ReportRepository extends SoftDeletableRepository<Report, UUID> 
     @Override
     @Modifying
     @Transactional
-    @Query("DELETE FROM Report r WHERE r.deleted = true AND r.deletedAt < :threshold")
+    @Query("DELETE FROM Report r WHERE r.isDeleted = true AND r.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
 }

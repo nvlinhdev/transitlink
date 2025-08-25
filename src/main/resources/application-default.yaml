@@ -91,6 +91,10 @@ logging:
     rollingpolicy:
       max-file-size: ${TRANSITLINK_MAX_LOG_FILE_SIZE:10MB}
       max-history: ${TRANSITLINK_MAX_LOG_HISTORY:7}
+  level:
+    org.springframework.cache: DEBUG
+    org.springframework.data.redis: DEBUG
+
 
 app:
   storage:
@@ -106,15 +110,15 @@ app:
       - /actuator/health
       - /actuator/info
       - /login/oauth2/**
-      - /api/auth/**
+      - /api/identity/auth/**
       - /oauth2/**
     cors:
       allowed-origins:
-        - "http://localhost:4200/"
-        - "http://localhost:8888/"
-        - "http://api.transitlink.fpt.edu.vn/"
-        - "https://api.transitlink.fpt.edu.vn/"
-        - "https://api.transitlink.dpdns.org/"
+        - "http://localhost:4200"
+        - "http://localhost:8888"
+        - "http://api.transitlink.fpt.edu.vn"
+        - "https://api.transitlink.fpt.edu.vn"
+        - "https://api.transitlink.dpdns.org"
       allowed-methods:
         - GET
         - POST
@@ -162,6 +166,6 @@ springdoc:
 
   groups:
     - group: auth
-      paths: /api/auth/**
+      paths: /api/identity/**
     - group: storage
       paths: /api/storage/**

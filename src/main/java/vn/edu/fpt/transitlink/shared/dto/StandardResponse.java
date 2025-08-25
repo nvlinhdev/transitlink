@@ -2,7 +2,6 @@ package vn.edu.fpt.transitlink.shared.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springframework.http.HttpStatus;
 import vn.edu.fpt.transitlink.shared.util.TimeUtil;
 
 @Schema(name = "StandardResponse", description = "Generic standard response wrapper")
@@ -41,8 +40,5 @@ public record StandardResponse<T>(
 
     public static <T> StandardResponse<T> created(String message, T data) {
         return new StandardResponse<>(true, message, data);
-    }
-    public static <T> StandardResponse<T> noContent(String message) {
-        return new StandardResponse<>(true, message, null);
     }
 }

@@ -13,6 +13,6 @@ public interface DepotRepository extends SoftDeletableRepository<Depot, UUID> {
     @Override
     @Modifying
     @Transactional
-    @Query("DELETE FROM Depot d WHERE d.deleted = true AND d.deletedAt < :threshold")
+    @Query("DELETE FROM Depot d WHERE d.isDeleted = true AND d.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
 }

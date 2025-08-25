@@ -16,7 +16,6 @@ import java.util.UUID;
 public class AuditingConfig {
 
     @Bean
-    @Profile("!test")
     public AuditorAware<UUID> auditorProvider() {
         return new JwtAuditorAware();
     }

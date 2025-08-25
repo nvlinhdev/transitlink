@@ -14,6 +14,6 @@ public interface NotificationRepository extends SoftDeletableRepository<Notifica
     @Override
     @Modifying
     @Transactional
-    @Query("DELETE FROM Notification n WHERE n.deleted = true AND n.deletedAt < :threshold")
+    @Query("DELETE FROM Notification n WHERE n.isDeleted = true AND n.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
 }

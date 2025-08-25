@@ -13,6 +13,6 @@ public interface PlaceRepository extends SoftDeletableRepository<Place, UUID> {
     @Override
     @Modifying
     @Transactional
-    @Query("DELETE FROM Place p WHERE p.deleted = true AND p.deletedAt < :threshold")
+    @Query("DELETE FROM Place p WHERE p.isDeleted = true AND p.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
 }

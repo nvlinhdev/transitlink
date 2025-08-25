@@ -13,6 +13,6 @@ public interface StopRepository extends SoftDeletableRepository<Stop, UUID> {
     @Override
     @Modifying
     @Transactional
-    @Query("DELETE FROM Stop s WHERE s.deleted = true AND s.deletedAt < :threshold")
+    @Query("DELETE FROM Stop s WHERE s.isDeleted = true AND s.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
 }

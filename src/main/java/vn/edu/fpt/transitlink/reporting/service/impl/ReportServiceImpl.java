@@ -1,8 +1,8 @@
 package vn.edu.fpt.transitlink.reporting.service.impl;
 
 import org.springframework.stereotype.Service;
-import vn.edu.fpt.transitlink.user.dto.DriverDTO;
-import vn.edu.fpt.transitlink.user.dto.PassengerDTO;
+import vn.edu.fpt.transitlink.identity.dto.DriverDTO;
+import vn.edu.fpt.transitlink.identity.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.reporting.dto.ReportDTO;
 import vn.edu.fpt.transitlink.reporting.mapper.ReportMapper;
 import vn.edu.fpt.transitlink.reporting.repository.ReportRepository;

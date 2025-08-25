@@ -13,6 +13,6 @@ public interface PassengerJourneyRepository extends SoftDeletableRepository<Pass
     @Override
     @Modifying
     @Transactional
-    @Query("DELETE FROM PassengerJourney p WHERE p.deleted = true AND p.deletedAt < :threshold")
+    @Query("DELETE FROM PassengerJourney p WHERE p.isDeleted = true AND p.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
 }

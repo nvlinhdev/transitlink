@@ -13,6 +13,6 @@ public interface DriverLocationRepository extends SoftDeletableRepository<Driver
     @Override
     @Modifying
     @Transactional
-    @Query("DELETE FROM DriverLocation d WHERE d.deleted = true AND d.deletedAt < :threshold")
+    @Query("DELETE FROM DriverLocation d WHERE d.isDeleted = true AND d.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
 }
