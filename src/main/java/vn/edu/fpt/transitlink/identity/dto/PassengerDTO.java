@@ -8,6 +8,4 @@ public record PassengerDTO(
         String phone,
         String address,
         String note
-) {
-
-}
+) {}

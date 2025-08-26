@@ -42,13 +42,7 @@ public class VerificationServiceImpl implements VerificationService {
 
         // Create verification data
         LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(tokenExpiryMinutes);
-        VerificationData verificationData = VerificationData.builder()
-                .email(email)
-                .token(token)
-                .otp(otp)
-                .type(type)
-                .expiryTime(expiryTime)
-                .build();
+        VerificationData verificationData = new VerificationData(email, token, otp, type, expiryTime);
 
         // Store in Redis with two keys for lookup by either email or token
         String emailKey = createEmailKey(email, type);

@@ -5,6 +5,11 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.security.*;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.models.GroupedOpenApi;
+import org.springdoc.core.properties.SwaggerUiConfigProperties;
+import org.springdoc.core.properties.SwaggerUiOAuthProperties;
+import org.springdoc.core.providers.ObjectMapperProvider;
+import org.springdoc.webmvc.ui.SwaggerIndexPageTransformer;
+import org.springdoc.webmvc.ui.SwaggerWelcomeCommon;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -45,5 +50,14 @@ public class OpenApiConfig {
                     .build());
         }
         return apis;
+    }
+
+    @Bean
+    public SwaggerIndexPageTransformer swaggerIndexPageTransformer(
+            SwaggerUiConfigProperties a,
+            SwaggerUiOAuthProperties b,
+            SwaggerWelcomeCommon c,
+            ObjectMapperProvider d) {
+        return new SwaggerCodeBlockTransformer(a, b, c, d);
     }
 }

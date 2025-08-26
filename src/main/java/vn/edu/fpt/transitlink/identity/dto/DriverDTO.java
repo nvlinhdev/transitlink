@@ -8,6 +8,4 @@ public record DriverDTO(
         String phone,
         String licenseNumber,
         String status
-) {
-
-}
+) {}

@@ -79,7 +79,7 @@ public class AuthServiceImpl implements AuthService {
 
     private TokenData buildTokenData(CustomUserPrincipal userPrincipal, RefreshToken refreshToken) {
         String accessToken = jwtService.generateAccessToken(userPrincipal);
-        return TokenData.from(
+        return new TokenData(
                 accessToken,
                 refreshToken.getToken(),
                 jwtService.getAccessTokenExpiration()
