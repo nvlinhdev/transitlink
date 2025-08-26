@@ -8,7 +8,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
-import vn.edu.fpt.transitlink.identity.dto.LoginRequest;
+import vn.edu.fpt.transitlink.identity.request.LoginRequest;
 import vn.edu.fpt.transitlink.identity.dto.TokenData;
 import vn.edu.fpt.transitlink.identity.entity.Account;
 import vn.edu.fpt.transitlink.identity.entity.RefreshToken;

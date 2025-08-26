@@ -1,4 +1,4 @@
-package vn.edu.fpt.transitlink.identity.dto;
+package vn.edu.fpt.transitlink.identity.request;
 
 import vn.edu.fpt.transitlink.identity.enumeration.Gender;
 import vn.edu.fpt.transitlink.identity.enumeration.RoleName;

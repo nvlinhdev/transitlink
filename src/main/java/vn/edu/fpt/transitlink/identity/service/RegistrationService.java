@@ -1,8 +1,8 @@
 package vn.edu.fpt.transitlink.identity.service;
 
-import vn.edu.fpt.transitlink.identity.dto.RegisterRequest;
-import vn.edu.fpt.transitlink.identity.dto.ResendVerificationRequest;
-import vn.edu.fpt.transitlink.identity.dto.VerifyEmailRequest;
+import vn.edu.fpt.transitlink.identity.request.RegisterRequest;
+import vn.edu.fpt.transitlink.identity.request.ResendVerificationRequest;
+import vn.edu.fpt.transitlink.identity.request.VerifyEmailRequest;
 
 public interface RegistrationService {
     boolean register(RegisterRequest registerRequest);

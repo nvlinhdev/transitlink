@@ -1,4 +1,4 @@
-package vn.edu.fpt.transitlink.identity.dto;
+package vn.edu.fpt.transitlink.identity.request;
 
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;

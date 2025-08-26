@@ -1,4 +1,4 @@
-package vn.edu.fpt.transitlink.identity.dto;
+package vn.edu.fpt.transitlink.identity.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

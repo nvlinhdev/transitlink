@@ -1,9 +1,9 @@
 package vn.edu.fpt.transitlink.identity.service;
 
-import vn.edu.fpt.transitlink.identity.dto.ChangePasswordRequest;
-import vn.edu.fpt.transitlink.identity.dto.ForgotPasswordRequest;
-import vn.edu.fpt.transitlink.identity.dto.ResetPasswordRequest;
-import vn.edu.fpt.transitlink.identity.dto.SetPasswordRequest;
+import vn.edu.fpt.transitlink.identity.request.ChangePasswordRequest;
+import vn.edu.fpt.transitlink.identity.request.ForgotPasswordRequest;
+import vn.edu.fpt.transitlink.identity.request.ResetPasswordRequest;
+import vn.edu.fpt.transitlink.identity.request.SetPasswordRequest;
 
 public interface PasswordService {
     void sendResetPasswordEmail(ForgotPasswordRequest request);

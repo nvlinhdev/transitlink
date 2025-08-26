@@ -91,10 +91,6 @@ logging:
     rollingpolicy:
       max-file-size: ${TRANSITLINK_MAX_LOG_FILE_SIZE:10MB}
       max-history: ${TRANSITLINK_MAX_LOG_HISTORY:7}
-  level:
-    org.springframework.cache: DEBUG
-    org.springframework.data.redis: DEBUG
-
 
 app:
   storage:
@@ -105,7 +101,7 @@ app:
     permit-all:
       - /swagger-ui/**
       - /v3/api-docs/**
-      - /swagger-ui.html
+      - /auth-dashboard.html
       - /files/**
       - /actuator/health
       - /actuator/info
@@ -116,8 +112,8 @@ app:
       allowed-origins:
         - "http://localhost:4200"
         - "http://localhost:8888"
+        - "https://transitlink.dpdns.org"
         - "http://api.transitlink.fpt.edu.vn"
-        - "https://api.transitlink.fpt.edu.vn"
         - "https://api.transitlink.dpdns.org"
       allowed-methods:
         - GET
@@ -142,7 +138,7 @@ app:
       max-attempts: 5
       rate-limit-minutes: 1
     frontend:
-      base-url: "http://localhost:4200"
+      base-url: ${FRONTEND_BASE_URL:"http://localhost:4200"}
 
 
 # SpringDoc configuration for API documentation
@@ -162,10 +158,12 @@ springdoc:
     - url: http://localhost:8888
       description: Local development server
     - url: http://api.transitlink.fpt.edu.vn
-      description: Containerized depvloyment server
+      description: Containerized deployment server
+    - url: https://api.transitlink.dpdns.org
+      description: Production server
 
   groups:
-    - group: auth
+    - group: identity
       paths: /api/identity/**
     - group: storage
       paths: /api/storage/**

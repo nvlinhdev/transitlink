@@ -12,9 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import vn.edu.fpt.transitlink.identity.dto.RegisterRequest;
-import vn.edu.fpt.transitlink.identity.dto.ResendVerificationRequest;
-import vn.edu.fpt.transitlink.identity.dto.VerifyEmailRequest;
+import vn.edu.fpt.transitlink.identity.request.RegisterRequest;
+import vn.edu.fpt.transitlink.identity.request.ResendVerificationRequest;
+import vn.edu.fpt.transitlink.identity.request.VerifyEmailRequest;
 import vn.edu.fpt.transitlink.identity.service.RegistrationService;
 import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 

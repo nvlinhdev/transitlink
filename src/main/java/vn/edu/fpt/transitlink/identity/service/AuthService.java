@@ -1,6 +1,6 @@
 package vn.edu.fpt.transitlink.identity.service;
 
-import vn.edu.fpt.transitlink.identity.dto.LoginRequest;
+import vn.edu.fpt.transitlink.identity.request.LoginRequest;
 import vn.edu.fpt.transitlink.identity.dto.TokenData;
 
 public interface AuthService {
