@@ -148,6 +148,8 @@ springdoc:
 
   swagger-ui:
     enabled: true # change false to disable Swagger UI on production
+    operations-sorter: method
+    tags-sorter: alpha
 
   info:
     title: TransitLink API

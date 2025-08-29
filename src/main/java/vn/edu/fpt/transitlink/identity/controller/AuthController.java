@@ -1,9 +1,6 @@
 package vn.edu.fpt.transitlink.identity.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -25,13 +22,8 @@ public class AuthController {
     private final AuthService authService;
 
     @Operation(summary = "Login user",
-            description = "Authenticate user with email/phone and password and return accessToken + refreshToken",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "User logged in successfully",
-                            content = @Content(schema = @Schema(implementation = StandardResponse.class))),
-                    @ApiResponse(responseCode = "401", description = "Invalid credentials",
-                            content = @Content(schema = @Schema(implementation = StandardResponse.class)))
-            })
+            description = "Authenticate user with email/phone and password and return accessToken + refreshToken"
+    )
     @PostMapping("/login")
     public ResponseEntity<StandardResponse<TokenData>> login(@Valid @RequestBody LoginRequest loginRequest) {
         TokenData tokenData = authService.login(loginRequest);
@@ -39,13 +31,8 @@ public class AuthController {
     }
 
     @Operation(summary = "Refresh JWT token",
-            description = "Refresh the access token using a valid refresh token",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Token refreshed successfully",
-                            content = @Content(schema = @Schema(implementation = StandardResponse.class))),
-                    @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token",
-                            content = @Content(schema = @Schema(implementation = StandardResponse.class)))
-            })
+            description = "Refresh the access token using a valid refresh token"
+    )
     @PostMapping("/refresh")
     public ResponseEntity<StandardResponse<TokenData>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         TokenData tokenData = authService.refresh(request.refreshToken());
@@ -53,13 +40,8 @@ public class AuthController {
     }
 
     @Operation(summary = "Logout user",
-            description = "Invalidate the refresh token and logout user",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "User logged out successfully",
-                            content = @Content(schema = @Schema(implementation = StandardResponse.class))),
-                    @ApiResponse(responseCode = "400", description = "Invalid refresh token",
-                            content = @Content(schema = @Schema(implementation = StandardResponse.class)))
-            })
+            description = "Invalidate the refresh token and logout user"
+    )
     @DeleteMapping("/logout")
     public ResponseEntity<StandardResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authService.logout(request.refreshToken());
@@ -67,13 +49,8 @@ public class AuthController {
     }
 
     @Operation(summary = "Login via Google for mobile",
-            description = "Authenticate mobile user via Google ID Token and return internal JWT",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "User logged in successfully",
-                            content = @Content(schema = @Schema(implementation = StandardResponse.class))),
-                    @ApiResponse(responseCode = "401", description = "Invalid Google ID Token",
-                            content = @Content(schema = @Schema(implementation = StandardResponse.class)))
-            })
+            description = "Authenticate mobile user via Google ID Token and return internal JWT"
+    )
     @PostMapping("/google/mobile")
     public ResponseEntity<StandardResponse<TokenData>> loginWithGoogleMobile(@RequestBody GoogleTokenRequest request) {
         TokenData tokenData = authService.loginWithGoogleMobile(request.idToken());

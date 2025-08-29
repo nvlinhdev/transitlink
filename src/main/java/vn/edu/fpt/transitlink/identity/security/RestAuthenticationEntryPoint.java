@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
-import vn.edu.fpt.transitlink.shared.dto.ErrorResponse;
+import vn.edu.fpt.transitlink.shared.dto.SimpleErrorResponse;
 
 import java.io.IOException;
 
@@ -21,7 +21,7 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
-        ErrorResponse error = new ErrorResponse(
+        SimpleErrorResponse error = new SimpleErrorResponse(
                 "You need to log in to access this resource",
                 "UNAUTHORIZED",
                 request.getRequestURI()

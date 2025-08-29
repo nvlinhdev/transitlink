@@ -1,10 +1,6 @@
 package vn.edu.fpt.transitlink.identity.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,36 +27,7 @@ public class AccountController {
     private final AccountService accountService;
 
     @Operation(summary = "Create account",
-        description = "Create a new account",
-        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            content = @Content(
-                schema = @Schema(implementation = CreateAccountRequest.class),
-                examples = @ExampleObject(
-                    name = "CreateAccountRequest Example",
-                    value = "{\"email\": \"user@example.com\", \"password\": \"StrongPassword123\", \"phone\": \"0123456789\", \"fullName\": \"John Doe\"}"
-                )
-            )
-        ),
-        responses = {
-            @ApiResponse(responseCode = "201", description = "Account created successfully",
-                content = @Content(
-                    schema = @Schema(implementation = StandardResponse.class),
-                    examples = @ExampleObject(
-                        name = "Success Response",
-                        value = "{\"success\": true, \"message\": \"Account created successfully\", \"data\": {\"id\": \"b3b8c8e2-8c2e-4e2a-9c2e-8c2e4e2a9c2e\", \"email\": \"user@example.com\", \"phone\": \"0123456789\", \"fullName\": \"John Doe\"}}"
-                    )
-                )
-            ),
-            @ApiResponse(responseCode = "400", description = "Invalid request",
-                content = @Content(
-                    schema = @Schema(implementation = StandardResponse.class),
-                    examples = @ExampleObject(
-                        name = "Error Response",
-                        value = "{\"success\": false, \"message\": \"Invalid request\", \"data\": null}"
-                    )
-                )
-            )
-        }
+            description = "Create a new account"
     )
     @PreAuthorize("hasRole('MANAGER')")
     @PostMapping
@@ -70,27 +37,7 @@ public class AccountController {
     }
 
     @Operation(summary = "Get account by ID",
-        description = "Get account details by ID",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Account found",
-                content = @Content(
-                    schema = @Schema(implementation = StandardResponse.class),
-                    examples = @ExampleObject(
-                        name = "Success Response",
-                        value = "{\"success\": true, \"message\": null, \"data\": {\"id\": \"b3b8c8e2-8c2e-4e2a-9c2e-8c2e4e2a9c2e\", \"email\": \"user@example.com\", \"phone\": \"0123456789\", \"fullName\": \"John Doe\"}}"
-                    )
-                )
-            ),
-            @ApiResponse(responseCode = "404", description = "Account not found",
-                content = @Content(
-                    schema = @Schema(implementation = StandardResponse.class),
-                    examples = @ExampleObject(
-                        name = "Error Response",
-                        value = "{\"success\": false, \"message\": \"Account not found\", \"data\": null}"
-                    )
-                )
-            )
-        }
+            description = "Get account details by ID"
     )
     @GetMapping("/{id}")
     public ResponseEntity<StandardResponse<AccountDTO>> getAccountById(@PathVariable UUID id) {
@@ -99,36 +46,7 @@ public class AccountController {
     }
 
     @Operation(summary = "Update account",
-        description = "Update account details",
-        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            content = @Content(
-                schema = @Schema(implementation = UpdateAccountRequest.class),
-                examples = @ExampleObject(
-                    name = "UpdateAccountRequest Example",
-                    value = "{\"phone\": \"0987654321\", \"fullName\": \"John Doe Updated\"}"
-                )
-            )
-        ),
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Account updated successfully",
-                content = @Content(
-                    schema = @Schema(implementation = StandardResponse.class),
-                    examples = @ExampleObject(
-                        name = "Success Response",
-                        value = "{\"success\": true, \"message\": null, \"data\": {\"id\": \"b3b8c8e2-8c2e-4e2a-9c2e-8c2e4e2a9c2e\", \"email\": \"user@example.com\", \"phone\": \"0987654321\", \"fullName\": \"John Doe Updated\"}}"
-                    )
-                )
-            ),
-            @ApiResponse(responseCode = "400", description = "Invalid request",
-                content = @Content(
-                    schema = @Schema(implementation = StandardResponse.class),
-                    examples = @ExampleObject(
-                        name = "Error Response",
-                        value = "{\"success\": false, \"message\": \"Invalid request\", \"data\": null}"
-                    )
-                )
-            )
-        }
+            description = "Update account details"
     )
     @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/{id}")
@@ -138,27 +56,7 @@ public class AccountController {
     }
 
     @Operation(summary = "Delete account",
-        description = "Delete account by ID",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Account deleted successfully",
-                content = @Content(
-                    schema = @Schema(implementation = StandardResponse.class),
-                    examples = @ExampleObject(
-                        name = "Success Response",
-                        value = "{\"success\": true, \"message\": \"Account deleted successfully\", \"data\": null}"
-                    )
-                )
-            ),
-            @ApiResponse(responseCode = "404", description = "Account not found",
-                content = @Content(
-                    schema = @Schema(implementation = StandardResponse.class),
-                    examples = @ExampleObject(
-                        name = "Error Response",
-                        value = "{\"success\": false, \"message\": \"Account not found\", \"data\": null}"
-                    )
-                )
-            )
-        }
+            description = "Delete account by ID"
     )
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('MANAGER')")
@@ -182,18 +80,7 @@ public class AccountController {
     }
 
     @Operation(summary = "Get accounts (paginated)",
-        description = "Get paginated list of accounts",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Accounts list",
-                content = @Content(
-                    schema = @Schema(implementation = PaginatedResponse.class),
-                    examples = @ExampleObject(
-                        name = "PaginatedResponse Example",
-                        value = "{\"content\": [{\"id\": \"b3b8c8e2-8c2e-4e2a-9c2e-8c2e4e2a9c2e\", \"email\": \"user@example.com\", \"phone\": \"0123456789\", \"fullName\": \"John Doe\"}], \"page\": 0, \"size\": 10, \"total\": 1}"
-                    )
-                )
-            )
-        }
+            description = "Get paginated list of accounts"
     )
     @PreAuthorize("hasRole('MANAGER')")
     @GetMapping
