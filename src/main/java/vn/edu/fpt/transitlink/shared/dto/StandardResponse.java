@@ -7,16 +7,16 @@ import vn.edu.fpt.transitlink.shared.util.TimeUtil;
 @Schema(name = "StandardResponse", description = "Generic standard response wrapper")
 public record StandardResponse<T>(
 
-        @Schema(description = "Indicates if request was successful")
+        @Schema(description = "Indicates if request was successful", example = "true")
         boolean success,
 
-        @Schema(description = "Message describing the result")
+        @Schema(description = "Message describing the result", example = "Operation completed successfully")
         String message,
 
         @Schema(description = "Returned data, can be any type")
         T data,
 
-        @Schema(description = "Timestamp when the response was generated")
+        @Schema(description = "Timestamp when the response was generated", example = "2025-08-30 15:30:45 UTC")
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss 'UTC'")
         String timestamp
 ) {

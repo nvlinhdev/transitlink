@@ -10,7 +10,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.fpt.transitlink.identity.dto.*;
 import vn.edu.fpt.transitlink.identity.request.CreateAccountRequest;
+import vn.edu.fpt.transitlink.identity.request.InitiateEmailChangeRequest;
 import vn.edu.fpt.transitlink.identity.request.UpdateAccountRequest;
+import vn.edu.fpt.transitlink.identity.request.UpdateCurrentUserRequest;
+import vn.edu.fpt.transitlink.identity.request.VerifyEmailChangeRequest;
 import vn.edu.fpt.transitlink.identity.service.AccountService;
 import vn.edu.fpt.transitlink.shared.dto.PaginatedResponse;
 import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
@@ -92,5 +95,55 @@ public class AccountController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Get current user's account",
+            description = "Get details of the currently authenticated user's account"
+    )
+    @GetMapping("/me")
+    public ResponseEntity<StandardResponse<AccountDTO>> getCurrentUserAccount(
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        AccountDTO result = accountService.getAccountById(principal.getId());
+        return ResponseEntity.ok(StandardResponse.success(result));
+    }
 
+    @Operation(summary = "Update current user's account",
+            description = "Update basic information of the currently authenticated user's account"
+    )
+    @PutMapping("/me")
+    public ResponseEntity<StandardResponse<AccountDTO>> updateCurrentUserAccount(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @Valid @RequestBody UpdateCurrentUserRequest request) {
+        AccountDTO result = accountService.updateCurrentUserAccount(principal.getId(), request);
+        return ResponseEntity.ok(StandardResponse.success(result));
+    }
+
+    @Operation(summary = "Initiate email change process",
+            description = "Start the email change process by sending a verification code to the new email"
+    )
+    @PostMapping("/me/email")
+    public ResponseEntity<StandardResponse<String>> initiateEmailChange(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @Valid @RequestBody InitiateEmailChangeRequest request) {
+
+        accountService.initiateEmailChange(principal.getId(), request);
+
+        // Not waiting for the email to be sent to respond to the client
+        return ResponseEntity.accepted().body(
+                StandardResponse.success("Verification email sent to " + request.newEmail() + ". Please check your inbox for the verification code.")
+        );
+    }
+
+    @Operation(summary = "Complete email change with verification",
+            description = "Complete the email change process by verifying the OTP sent to the new email"
+    )
+    @PutMapping("/me/email")
+    public ResponseEntity<StandardResponse<AccountDTO>> verifyAndUpdateEmail(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @Valid @RequestBody VerifyEmailChangeRequest request) {
+
+        AccountDTO result = accountService.updateCurrentUserEmail(principal.getId(), request);
+
+        return ResponseEntity.ok(
+                StandardResponse.success("Email successfully updated", result)
+        );
+    }
 }

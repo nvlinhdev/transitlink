@@ -10,42 +10,42 @@ import java.util.List;
 @Schema(name = "PaginatedResponse", description = "Paginated response with metadata")
 public record PaginatedResponse<T>(
 
-        @Schema(description = "Indicates if request was successful")
+        @Schema(description = "Indicates if request was successful", example = "true")
         boolean success,
 
-        @Schema(description = "Message describing the result")
+        @Schema(description = "Message describing the result", example = "Successfully retrieved data")
         String message,
 
-        @Schema(description = "List of items returned for this page")
+        @Schema(description = "List of items returned for this page", example = "[{\"id\":1,\"name\":\"Example\"}]")
         List<T> data,
 
-        @Schema(description = "Timestamp when the response was generated")
+        @Schema(description = "Timestamp when the response was generated", example = "2025-08-30 15:30:45 UTC")
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss 'UTC'")
         String timestamp,
 
         // Pagination metadata
-        @Schema(description = "Current page number (0-based)")
+        @Schema(description = "Current page number (0-based)", example = "0")
         int page,
 
-        @Schema(description = "Size of each page")
+        @Schema(description = "Size of each page", example = "10")
         int size,
 
-        @Schema(description = "Total number of elements across all pages")
+        @Schema(description = "Total number of elements across all pages", example = "42")
         long totalElements,
 
-        @Schema(description = "Total number of pages")
+        @Schema(description = "Total number of pages", example = "5")
         int totalPages,
 
-        @Schema(description = "Whether there is a next page")
+        @Schema(description = "Whether there is a next page", example = "true")
         boolean hasNext,
 
-        @Schema(description = "Whether there is a previous page")
+        @Schema(description = "Whether there is a previous page", example = "false")
         boolean hasPrevious,
 
-        @Schema(description = "Whether this is the first page")
+        @Schema(description = "Whether this is the first page", example = "true")
         boolean isFirst,
 
-        @Schema(description = "Whether this is the last page")
+        @Schema(description = "Whether this is the last page", example = "false")
         boolean isLast
 ) {
     // Constructor với tính toán tự động - handle edge cases

@@ -4,12 +4,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import org.hibernate.validator.constraints.URL;
 import vn.edu.fpt.transitlink.identity.enumeration.Gender;
-import vn.edu.fpt.transitlink.identity.enumeration.RoleName;
 
 import java.time.LocalDate;
-import java.util.Set;
 
-public record UpdateAccountRequest (
+public record UpdateCurrentUserRequest(
     @Schema(example = "Linh")
     @Pattern(
             regexp = "^[\\p{L}]+( [\\p{L}]+)*$",
@@ -43,8 +41,5 @@ public record UpdateAccountRequest (
 
     @Schema(example = "https://example.com/avatar.png")
     @URL(message = "Invalid URL format")
-    String avatarUrl,
-
-    @Schema(description = "User roles")
-    Set<RoleName> roles
+    String avatarUrl
 ) {}

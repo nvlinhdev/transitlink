@@ -17,7 +17,8 @@ public enum AuthErrorCode implements ErrorCodeDefinition {
     INVALID_OLD_PASSWORD("INVALID_OLD_PASSWORD", "Old password is incorrect", HttpStatus.BAD_REQUEST),
     ACCOUNT_HAS_NO_PASSWORD("ACCOUNT_HAS_NO_PASSWORD", "Account has no password set", HttpStatus.BAD_REQUEST),
     ACCOUNT_ALREADY_HAS_PASSWORD("ACCOUNT_ALREADY_HAS_PASSWORD", "Account already has a password set", HttpStatus.BAD_REQUEST),
-    CANNOT_DELETE_OWN_ACCOUNT("CANNOT_DELETE_OWN_ACCOUNT", "You cannot delete your own account", HttpStatus.BAD_REQUEST);
+    CANNOT_DELETE_OWN_ACCOUNT("CANNOT_DELETE_OWN_ACCOUNT", "You cannot delete your own account", HttpStatus.BAD_REQUEST),
+    INVALID_NEW_EMAIL("INVALID_NEW_EMAIL", "New email is the same as the current email", HttpStatus.BAD_REQUEST);
 
     private String code;
     private String defaultMessage;

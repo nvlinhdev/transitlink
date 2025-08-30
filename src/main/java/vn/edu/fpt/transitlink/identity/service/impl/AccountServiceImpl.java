@@ -8,16 +8,21 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.edu.fpt.transitlink.identity.enumeration.RoleName;
+import vn.edu.fpt.transitlink.identity.enumeration.VerificationType;
 import vn.edu.fpt.transitlink.identity.mapper.AccountMapper;
 import vn.edu.fpt.transitlink.identity.mapper.RoleMapper;
 import vn.edu.fpt.transitlink.identity.repository.AccountRepository;
 import vn.edu.fpt.transitlink.identity.request.CreateAccountRequest;
+import vn.edu.fpt.transitlink.identity.request.InitiateEmailChangeRequest;
 import vn.edu.fpt.transitlink.identity.request.UpdateAccountRequest;
+import vn.edu.fpt.transitlink.identity.request.UpdateCurrentUserRequest;
+import vn.edu.fpt.transitlink.identity.request.VerifyEmailChangeRequest;
 import vn.edu.fpt.transitlink.identity.service.AccountService;
 import vn.edu.fpt.transitlink.identity.dto.*;
 import vn.edu.fpt.transitlink.identity.entity.Account;
 import vn.edu.fpt.transitlink.identity.entity.Role;
 import vn.edu.fpt.transitlink.identity.service.RoleService;
+import vn.edu.fpt.transitlink.identity.service.VerificationService;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 import vn.edu.fpt.transitlink.identity.enumeration.AuthErrorCode;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +30,7 @@ import org.springframework.data.domain.PageRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @RequiredArgsConstructor
 @Service
@@ -34,6 +40,7 @@ public class AccountServiceImpl implements AccountService {
     private final RoleMapper roleMapper;
     private final AccountMapper accountMapper;
     private final PasswordEncoder passwordEncoder;
+    private final VerificationService verificationService;
 
     @Caching(
             put   = { @CachePut(value = "accountsById", key = "#result.id") },
@@ -145,5 +152,77 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public long countAccounts() {
         return accountRepository.count();
+    }
+
+    @Caching(
+            put   = { @CachePut(value = "accountsById", key = "#userId") },
+            evict = { @CacheEvict(value = "accountsPage", allEntries = true) }
+    )
+    @Override
+    public AccountDTO updateCurrentUserAccount(UUID userId, UpdateCurrentUserRequest dto) {
+        Account account = accountRepository.findById(userId)
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+
+        // Cập nhật thông tin cá nhân của người dùng
+        account.setFirstName(dto.firstName());
+        account.setLastName(dto.lastName());
+        account.setGender(dto.gender());
+        account.setBirthDate(dto.birthDate());
+        account.setPhoneNumber(dto.phoneNumber());
+        account.setZaloPhoneNumber(dto.zaloPhoneNumber());
+        account.setAvatarUrl(dto.avatarUrl());
+
+        Account saved = accountRepository.save(account);
+        return accountMapper.toDTO(saved);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> initiateEmailChange(UUID userId, InitiateEmailChangeRequest dto) {
+        // First get the account to verify it exists
+        Account account = accountRepository.findById(userId)
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+
+        // Check if the new email is different from the current one
+        if (account.getEmail().equalsIgnoreCase(dto.newEmail())) {
+            throw new BusinessException(AuthErrorCode.INVALID_NEW_EMAIL, "New email must be different from current email");
+        }
+
+        // Check if the new email is already in use by another account
+        boolean emailExists = accountRepository.existsByEmail(dto.newEmail());
+        if (emailExists) {
+            throw new BusinessException(AuthErrorCode.EMAIL_ALREADY_EXISTS, "Email is already in use");
+        }
+
+        // Add additional template variables
+        Map<String, Object> templateVariables = new HashMap<>();
+        templateVariables.put("name", account.getFirstName() + " " + account.getLastName());
+        templateVariables.put("currentEmail", account.getEmail());
+        templateVariables.put("newEmail", dto.newEmail());
+
+        // Send verification email to the new email address
+        return verificationService.sendVerificationEmail(dto.newEmail(), VerificationType.EMAIL_CHANGE, templateVariables);
+    }
+
+    @Caching(
+            put   = { @CachePut(value = "accountsById", key = "#userId") },
+            evict = { @CacheEvict(value = "accountsPage", allEntries = true) }
+    )
+    @Override
+    public AccountDTO updateCurrentUserEmail(UUID userId, VerifyEmailChangeRequest dto) {
+        Account account = accountRepository.findById(userId)
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+
+        // Verify the OTP for the new email
+        boolean isOtpValid = verificationService.verifyOtp(dto.newEmail(), dto.otp(), VerificationType.EMAIL_CHANGE);
+
+        if (!isOtpValid) {
+            throw new BusinessException(AuthErrorCode.INVALID_OTP, "Invalid or expired OTP");
+        }
+
+        account.setEmail(dto.newEmail());
+        account.setEmailVerified(true);
+
+        Account saved = accountRepository.save(account);
+        return accountMapper.toDTO(saved);
     }
 }

@@ -1,8 +1,6 @@
 package vn.edu.fpt.transitlink.identity.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.validation.constraints.*;
 import org.hibernate.validator.constraints.URL;
 import vn.edu.fpt.transitlink.identity.enumeration.Gender;
@@ -39,7 +37,6 @@ public record RegisterRequest(
         String lastName,
         @Schema(example = "MALE")
         @NotNull(message = "Gender cannot be null")
-        @Enumerated(EnumType.STRING)
         Gender gender,
         @Schema(example = "1995-05-20")
         @Past(message = "Birth date must be in the past")
