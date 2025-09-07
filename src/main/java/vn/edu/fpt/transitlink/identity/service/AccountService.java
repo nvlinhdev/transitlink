@@ -17,6 +17,7 @@ public interface AccountService {
     AccountDTO updateAccount(UUID id, UpdateAccountRequest dto);
     AccountDTO deleteAccount(UUID deleteId, UUID deleteByID);
     AccountDTO restoreAccount(UUID restoreId);
+    void hardDeleteAccount(UUID id);
     List<AccountDTO> getAccounts(int page, int size);
     long countAccounts();
     AccountDTO updateCurrentUserAccount(UUID userId, UpdateCurrentUserRequest dto);
@@ -24,4 +25,8 @@ public interface AccountService {
     // Email change workflow methods
     CompletableFuture<Boolean> initiateEmailChange(UUID userId, InitiateEmailChangeRequest dto);
     AccountDTO updateCurrentUserEmail(UUID userId, VerifyEmailChangeRequest dto);
+
+    // Phương thức mới để lấy danh sách các tài khoản đã bị xóa mềm
+    List<AccountDTO> getDeletedAccounts(int page, int size);
+    long countDeletedAccounts();
 }

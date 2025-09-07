@@ -112,6 +112,7 @@ app:
       - /actuator/info
       - /login/oauth2/**
       - /api/identity/auth/**
+      - /api/identity/registration/**
       - /oauth2/**
     cors:
       allowed-origins:

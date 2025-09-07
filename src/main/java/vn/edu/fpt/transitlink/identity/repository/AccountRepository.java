@@ -35,4 +35,18 @@ public interface AccountRepository extends SoftDeletableRepository<Account, UUID
     @Transactional
     @Query("DELETE FROM Account acc WHERE acc.isDeleted = true AND acc.deletedAt < :threshold")
     int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
+
+    // Phương thức để lấy danh sách các tài khoản đã bị xóa mềm
+    @Query("""
+                SELECT DISTINCT a 
+                FROM Account a 
+                LEFT JOIN a.roles r
+                WHERE a.isDeleted = true
+                  AND (r IS NULL OR r.name NOT IN :roleNames)
+            """)
+    Page<Account> findAllDeletedExcludingRoles(@Param("roleNames") Set<RoleName> roleNames, Pageable pageable);
+
+    // Phương thức để đếm số lượng tài khoản đã bị xóa mềm
+    @Query("SELECT COUNT(DISTINCT a) FROM Account a LEFT JOIN a.roles r WHERE a.isDeleted = true AND (r IS NULL OR r.name NOT IN :roleNames)")
+    long countDeletedExcludingRoles(@Param("roleNames") Set<RoleName> roleNames);
 }

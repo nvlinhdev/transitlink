@@ -31,6 +31,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 @Service
@@ -108,7 +109,8 @@ public class AccountServiceImpl implements AccountService {
     @Caching(
             evict = {
                     @CacheEvict(value = "accountsById", key = "#deleteId"),
-                    @CacheEvict(value = "accountsPage", allEntries = true)
+                    @CacheEvict(value = "accountsPage", allEntries = true),
+                    @CacheEvict(value = "deletedAccountsPage", allEntries = true)
             }
     )
     @Override
@@ -128,7 +130,10 @@ public class AccountServiceImpl implements AccountService {
 
     @Caching(
             put   = { @CachePut(value = "accountsById", key = "#restoreId") },
-            evict = { @CacheEvict(value = "accountsPage", allEntries = true) }
+            evict = {
+                    @CacheEvict(value = "accountsPage", allEntries = true),
+                    @CacheEvict(value = "deletedAccountsPage", allEntries = true)
+            }
     )
     @Override
     public AccountDTO restoreAccount(UUID restoreId) {
@@ -224,5 +229,35 @@ public class AccountServiceImpl implements AccountService {
 
         Account saved = accountRepository.save(account);
         return accountMapper.toDTO(saved);
+    }
+
+    @Cacheable(value = "deletedAccountsPage", key = "'page:' + #page + ':size:' + #size")
+    @Override
+    public List<AccountDTO> getDeletedAccounts(int page, int size) {
+        var paged = accountRepository.findAllDeletedExcludingRoles(Set.of(RoleName.PASSENGER, RoleName.MANAGER), PageRequest.of(page, size));
+        return paged.stream().map(accountMapper::toDTO).toList();
+    }
+
+    @Override
+    public long countDeletedAccounts() {
+        return accountRepository.countDeletedExcludingRoles(Set.of(RoleName.PASSENGER, RoleName.MANAGER));
+    }
+
+    @Transactional
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "accountsById", key = "#id"),
+                    @CacheEvict(value = "accountsPage", allEntries = true),
+                    @CacheEvict(value = "deletedAccountsPage", allEntries = true)
+            }
+    )
+    @Override
+    public void hardDeleteAccount(UUID id) {
+        // Tìm tài khoản bao gồm cả tài khoản đã bị xóa mềm
+        Account account = accountRepository.findByIdIncludingDeleted(id)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+
+        // Xóa vĩnh viễn tài khoản
+        accountRepository.delete(account);
     }
 }

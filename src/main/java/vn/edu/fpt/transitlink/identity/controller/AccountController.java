@@ -58,6 +58,17 @@ public class AccountController {
         return ResponseEntity.ok(StandardResponse.success(result));
     }
 
+
+    @Operation(summary = "Permanently delete account",
+            description = "Permanently delete an account (cannot be restored)"
+    )
+    @DeleteMapping("/{id}/permanent")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<StandardResponse<Void>> hardDeleteAccount(@PathVariable UUID id) {
+        accountService.hardDeleteAccount(id);
+        return ResponseEntity.ok(StandardResponse.success("Account permanently deleted successfully", null));
+    }
+
     @Operation(summary = "Delete account",
             description = "Delete account by ID"
     )
@@ -92,6 +103,21 @@ public class AccountController {
         List<AccountDTO> accounts = accountService.getAccounts(page, size);
         long total = accountService.countAccounts();
         PaginatedResponse<AccountDTO> response = new PaginatedResponse<>(accounts, page, size, total);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @Operation(summary = "Get deleted accounts (paginated)",
+            description = "Get paginated list of soft-deleted accounts"
+    )
+    @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/deleted")
+    public ResponseEntity<PaginatedResponse<AccountDTO>> getDeletedAccounts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        List<AccountDTO> deletedAccounts = accountService.getDeletedAccounts(page, size);
+        long total = accountService.countDeletedAccounts();
+        PaginatedResponse<AccountDTO> response = new PaginatedResponse<>(deletedAccounts, page, size, total);
         return ResponseEntity.ok(response);
     }
 
