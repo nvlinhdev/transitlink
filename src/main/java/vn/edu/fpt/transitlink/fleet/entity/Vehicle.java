@@ -3,6 +3,7 @@ package vn.edu.fpt.transitlink.fleet.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import vn.edu.fpt.transitlink.fleet.enumeration.FuelType;
 import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
 
 import java.util.UUID;
@@ -11,22 +12,17 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @Setter
-@Builder
-@ToString
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(
-        name = "depots",
-        uniqueConstraints = @UniqueConstraint(columnNames = "depot_id")
-)
+@Table(name = "vehicles")
 public class Vehicle extends BaseSoftDeletableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    private String license_plate;
-    private String vehicle_type;
-    private int capacity;
-    private String fuel_type;
-    private double fuel_consumption_rate;
-    private String status;
-    }
+    private String name;
+    private String licensePlate;
+    private Integer capacity;
+    private FuelType fuelType;
+    private Float fuelConsumptionRate;
+    private UUID depotId;
+}

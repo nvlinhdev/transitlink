@@ -14,7 +14,11 @@ public enum FleetErrorCode implements ErrorCodeDefinition {
     DEPOT_PLACE_NOT_FOUND("DEPOT_PLACE_NOT_FOUND", "Place not found for depot", HttpStatus.BAD_REQUEST),
 
     //Vehicles
-
+    VEHICLE_NOT_FOUND("VEHICLE_NOT_FOUND", "Vehicle not found", HttpStatus.NOT_FOUND),
+    VEHICLE_LICENSE_PLATE_EXISTS("VEHICLE_LICENSE_PLATE_EXISTS", "Vehicle license plate already exists", HttpStatus.BAD_REQUEST),
+    VEHICLE_ALREADY_DELETED("VEHICLE_ALREADY_DELETED", "Vehicle is already deleted", HttpStatus.BAD_REQUEST),
+    VEHICLE_NOT_DELETED("VEHICLE_NOT_DELETED", "Vehicle is not deleted", HttpStatus.BAD_REQUEST),
+    VEHICLE_DEPOT_NOT_FOUND("VEHICLE_DEPOT_NOT_FOUND", "Depot not found for vehicle", HttpStatus.BAD_REQUEST)
     ;
 
     private final String code;
