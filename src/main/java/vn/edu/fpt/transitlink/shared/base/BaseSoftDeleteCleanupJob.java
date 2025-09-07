@@ -9,7 +9,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-public abstract class BaseSoftDeleteCleanupJob<T, ID> {
+public abstract class BaseSoftDeleteCleanupJob<T extends BaseSoftDeletableEntity, ID> {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
