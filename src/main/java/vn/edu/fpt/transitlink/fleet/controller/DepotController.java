@@ -73,13 +73,14 @@ public class DepotController {
     }
 
     @Operation(summary = "Permanently delete depot",
-            description = "Permanently delete a depot (cannot be restored)"
+            description = "Permanently delete a depot (cannot be restored). DEPRECATED: This endpoint is deprecated and will be removed in future versions. Use soft delete instead."
     )
+    @Deprecated(since = "1.1.0", forRemoval = true)
     @DeleteMapping("/{id}/permanent")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<StandardResponse<Void>> hardDeleteDepot(@PathVariable UUID id) {
         depotService.hardDeleteDepot(id);
-        return ResponseEntity.ok(StandardResponse.success("Depot permanently deleted successfully", null));
+        return ResponseEntity.ok(StandardResponse.success("Depot permanently deleted successfully, but note that this endpoint is deprecated and will be removed in future versions.", null));
     }
 
     @Operation(summary = "Get depot by ID",
