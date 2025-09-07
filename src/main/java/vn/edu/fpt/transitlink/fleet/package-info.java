@@ -4,6 +4,8 @@
         type = ApplicationModule.Type.CLOSED,
         allowedDependencies = {
                 "shared",
+                "location::service",
+                "location::dto",
         }
 )
 

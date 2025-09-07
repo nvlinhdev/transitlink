@@ -1,18 +1,11 @@
 package vn.edu.fpt.transitlink.location.repository;
 
-import jakarta.transaction.Transactional;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.JpaRepository;
 import vn.edu.fpt.transitlink.location.entity.Place;
-import vn.edu.fpt.transitlink.shared.base.SoftDeletableRepository;
 
-import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
-public interface PlaceRepository extends SoftDeletableRepository<Place, UUID> {
-    @Override
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM Place p WHERE p.isDeleted = true AND p.deletedAt < :threshold")
-    int hardDeleteSoftDeletedBefore(OffsetDateTime threshold);
+public interface PlaceRepository extends JpaRepository<Place, UUID> {
+    List<Place> findByNameContainingIgnoreCase(String query);
 }

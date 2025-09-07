@@ -85,12 +85,13 @@ dependencies {
     val mapstructLombokBindingVersion = "0.2.0"
     val jwtVersion = "0.12.7"
     val springCrytoVersion = "6.5.3"
-    val spatialVersion = "6.6.18.Final"
+//    val spatialVersion = "6.6.18.Final"
 
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-data-elasticsearch")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -116,7 +117,7 @@ dependencies {
     // Firebase
     implementation("com.google.firebase:firebase-admin:$firebaseAdminVersion")
     // Hibernate Spatial
-    implementation("org.hibernate.orm:hibernate-spatial:$spatialVersion")
+//    implementation("org.hibernate.orm:hibernate-spatial:$spatialVersion")
     // MapStruct
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
     // PostgreSQL

@@ -4,8 +4,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
+import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
 import vn.edu.fpt.transitlink.storage.exception.StorageErrorCode;
 import vn.edu.fpt.transitlink.storage.dto.FileInfoDTO;
 import vn.edu.fpt.transitlink.storage.service.StorageService;
@@ -15,7 +17,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,11 +42,11 @@ public class StorageController {
     public ResponseEntity<StandardResponse<FileInfoDTO>> uploadFile(
             @Parameter(description = "File to be uploaded", required = true)
             @RequestParam("file") MultipartFile file,
-            Authentication authentication) {
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
 
-        UUID userId = UUID.fromString(authentication.getName());
+
         try {
-            FileInfo fileInfo = storageService.uploadFile(file, userId);
+            FileInfo fileInfo = storageService.uploadFile(file, principal.getId());
             return ResponseEntity
                     .status(201)
                     .body(StandardResponse.created(FileInfoDTO.from(fileInfo)));
@@ -113,9 +114,9 @@ public class StorageController {
     public ResponseEntity<StandardResponse<Void>> deleteFile(
             @Parameter(description = "File ID", required = true)
             @PathVariable UUID id,
-            Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
-        storageService.deleteFile(id, userId);
+            @AuthenticationPrincipal CustomUserPrincipal principal
+    ){
+        storageService.deleteFile(id, principal.getId());
         return ResponseEntity.noContent().build();
     }
 }

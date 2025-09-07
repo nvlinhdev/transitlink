@@ -1,11 +1,11 @@
 package vn.edu.fpt.transitlink.location.dto;
 
-import java.awt.*;
 import java.util.UUID;
 
 public record PlaceDTO(
-        UUID placeId,
-        Point location,
+        UUID id,
+        String name,
+        Double latitude,
+        Double longitude,
         String address
-) {
-}
+) {}

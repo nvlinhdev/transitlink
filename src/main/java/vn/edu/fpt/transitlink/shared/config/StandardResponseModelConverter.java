@@ -49,10 +49,10 @@ public class StandardResponseModelConverter implements ModelConverter {
                 JavaType contentType = dataType.getContentType();
                 Schema<?> itemSchema = context.resolve(new AnnotatedType(contentType).resolveAsRef(false));
                 Schema<?> dataSchema = new ArraySchema().items(itemSchema);
-
+                
                 // Thêm mẫu ví dụ cho mảng rỗng
                 dataSchema.example("[]");
-
+                
                 wrapperSchema.addProperty("data", dataSchema);
                 suffix = contentType.getRawClass().getSimpleName() + "List";
 
@@ -61,17 +61,17 @@ public class StandardResponseModelConverter implements ModelConverter {
                 JavaType valueType = dataType.getContentType();
                 Schema<?> valueSchema = context.resolve(new AnnotatedType(valueType).resolveAsRef(false));
                 Schema<?> dataSchema = new MapSchema().additionalProperties(valueSchema);
-
+                
                 // Thêm mẫu ví dụ cho map rỗng
                 dataSchema.example("{}");
-
+                
                 wrapperSchema.addProperty("data", dataSchema);
                 suffix = "Map" + valueType.getRawClass().getSimpleName();
 
             } else {
                 // Kiểu đơn giản: UserDTO, String, Integer...
                 Schema<?> dataSchema = context.resolve(new AnnotatedType(dataType).resolveAsRef(false));
-
+                
                 // Thêm example cơ bản cho các kiểu dữ liệu phổ biến
                 if (dataType.getRawClass() == String.class) {
                     dataSchema.example("Example string value");
@@ -98,7 +98,7 @@ public class StandardResponseModelConverter implements ModelConverter {
                 } else if (dataType.getRawClass() == java.util.UUID.class) {
                     dataSchema.example("a573aa20-f56b-4888-8b5b-88a7ad21b928");
                 }
-
+                
                 wrapperSchema.addProperty("data", dataSchema);
                 suffix = dataType.getRawClass().getSimpleName();
             }

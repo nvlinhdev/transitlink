@@ -1,26 +1,23 @@
 package vn.edu.fpt.transitlink.location.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
-import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
-
-import java.awt.*;
 import java.util.UUID;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-@Builder
-@ToString
-@EqualsAndHashCode(callSuper = true)
 @Entity
-public class Place extends BaseSoftDeletableEntity {
+@Table(
+        name = "places",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"latitude", "longitude"})
+)
+public class Place {
     @Id
-    @GeneratedValue
-    private UUID placeId;
-    private Point location;
+    private UUID id;
+    private String name;
+    private Double latitude;
+    private Double longitude;
     private String address;
 }
