@@ -6,6 +6,8 @@
                 "shared",
                 "mail-sender::service",
                 "mail-sender::dto",
+                "fleet::dto",
+                "fleet::service",
         }
 )
 package vn.edu.fpt.transitlink.identity;

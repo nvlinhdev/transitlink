@@ -60,6 +60,7 @@ public class AccountServiceImpl implements AccountService {
         account.setZaloPhoneNumber(dto.zaloPhoneNumber());
         account.setAvatarUrl(dto.avatarUrl());
         account.setEmailVerified(false);
+        account.setProfileCompleted(false);
         if (dto.roles() != null) {
             Set<Role> roles = dto.roles().stream()
                             .map(roleService::findByName)
@@ -95,6 +96,7 @@ public class AccountServiceImpl implements AccountService {
         account.setPhoneNumber(dto.phoneNumber());
         account.setZaloPhoneNumber(dto.zaloPhoneNumber());
         account.setAvatarUrl(dto.avatarUrl());
+        account.setProfileCompleted(true);
         if (dto.roles() != null) {
             Set<Role> roles = dto.roles().stream()
                     .map(roleService::findByName)

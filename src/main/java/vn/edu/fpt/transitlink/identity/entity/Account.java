@@ -26,6 +26,7 @@ public class Account extends BaseSoftDeletableEntity {
     private UUID id;
     private String email;
     private Boolean emailVerified;
+    private Boolean profileCompleted;
     private String password;
     private String firstName;
     private String lastName;
@@ -41,8 +42,4 @@ public class Account extends BaseSoftDeletableEntity {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     @JsonManagedReference
     private Set<Role> roles;
-    @OneToOne(mappedBy = "account")
-    private Driver driver;
-    @OneToOne(mappedBy = "account")
-    private Passenger passenger;
 }

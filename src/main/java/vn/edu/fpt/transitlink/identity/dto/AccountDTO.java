@@ -17,6 +17,9 @@ public record AccountDTO(
     @Schema(example = "true", description = "Whether the email has been verified")
     Boolean emailVerified,
 
+    @Schema(example = "true", description = "Whether the profile is completed")
+    Boolean profileCompleted,
+
     @Schema(example = "Linh", description = "First name of the account holder")
     String firstName,
 

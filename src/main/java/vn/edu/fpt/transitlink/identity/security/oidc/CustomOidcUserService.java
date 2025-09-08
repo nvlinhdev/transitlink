@@ -42,7 +42,6 @@ public class CustomOidcUserService extends OidcUserService {
                     String firstName = (String) attributes.get("given_name");
                     String lastName = (String) attributes.get("family_name");
                     String avatarUrl = (String) attributes.get("picture");
-                    Boolean emailVerified = (Boolean) attributes.get("email_verified");
 
                     Account newAccount = new Account();
                     newAccount.setEmail(email);
@@ -50,7 +49,8 @@ public class CustomOidcUserService extends OidcUserService {
                     newAccount.setFirstName(firstName);
                     newAccount.setLastName(lastName);
                     newAccount.setAvatarUrl(avatarUrl);
-                    newAccount.setEmailVerified(emailVerified != null && emailVerified);
+                    newAccount.setEmailVerified(true);
+                    newAccount.setProfileCompleted(false);
 
                     Optional<Role> passenger = roleRepository.findByName(RoleName.PASSENGER);
                     if (passenger.isEmpty()) {
@@ -74,6 +74,8 @@ public class CustomOidcUserService extends OidcUserService {
         return new CustomUserPrincipal(
                 account.getId(),
                 account.getEmail(),
+                account.getEmailVerified(),
+                account.getProfileCompleted(),
                 null,
                 account.getRoles().stream()
                         .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))

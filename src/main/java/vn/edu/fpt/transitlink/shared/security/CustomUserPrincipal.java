@@ -14,6 +14,8 @@ public class CustomUserPrincipal implements UserDetails, OidcUser {
 
     private final UUID id;
     private final String email;
+    private final Boolean emailVerified;
+    private final Boolean profileCompleted;
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;
     private final OidcIdToken idToken;
@@ -22,6 +24,8 @@ public class CustomUserPrincipal implements UserDetails, OidcUser {
 
     public CustomUserPrincipal(UUID id,
                                String email,
+                               Boolean emailVerified,
+                               Boolean profileCompleted,
                                String password,
                                Collection<? extends GrantedAuthority> authorities,
                                OidcIdToken idToken,
@@ -29,6 +33,8 @@ public class CustomUserPrincipal implements UserDetails, OidcUser {
                                Map<String, Object> attributes) {
         this.id = id;
         this.email = email;
+        this.emailVerified = emailVerified;
+        this.profileCompleted = profileCompleted;
         this.password = password;
         this.authorities = authorities;
         this.idToken = idToken;
@@ -42,6 +48,14 @@ public class CustomUserPrincipal implements UserDetails, OidcUser {
 
     public String getEmail() {
         return email;
+    }
+
+    public Boolean getEmailVerified() {
+        return emailVerified;
+    }
+
+    public Boolean getProfileCompleted() {
+        return profileCompleted;
     }
 
     // ===== UserDetails methods =====

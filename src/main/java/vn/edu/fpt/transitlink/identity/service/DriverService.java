@@ -1,13 +1,27 @@
 package vn.edu.fpt.transitlink.identity.service;
 
 import vn.edu.fpt.transitlink.identity.dto.DriverDTO;
+import vn.edu.fpt.transitlink.identity.request.CreateDriverRequest;
+import vn.edu.fpt.transitlink.identity.request.UpdateDriverRequest;
 
-import java.security.Principal;
+import java.util.List;
 import java.util.UUID;
 
 public interface DriverService {
-    DriverDTO enterDriverData(DriverDTO driverDTO, Principal principal);
-    DriverDTO importDriverData(DriverDTO driverDTO, Principal principal);
-    DriverDTO deleteDriverData(UUID driverId, Principal principal);
-    DriverDTO getListDriver(Principal principal);
+    // Create and manage drivers
+    DriverDTO createDriver(CreateDriverRequest request);
+    DriverDTO getDriverById(UUID id);
+    DriverDTO updateDriver(UUID id, UpdateDriverRequest request);
+    DriverDTO deleteDriver(UUID deleteId, UUID deletedBy);
+    DriverDTO restoreDriver(UUID id);
+
+    // List and paginate drivers
+    List<DriverDTO> getDrivers(int page, int size);
+    long countDrivers();
+    List<DriverDTO> getDeletedDrivers(int page, int size);
+    long countDeletedDrivers();
+
+    // Current driver operations
+    DriverDTO getCurrentDriverByAccountId(UUID accountId);
+    DriverDTO updateCurrentDriver(UUID accountId, UpdateDriverRequest request);
 }

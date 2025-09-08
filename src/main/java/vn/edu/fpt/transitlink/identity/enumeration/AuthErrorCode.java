@@ -7,6 +7,7 @@ public enum AuthErrorCode implements ErrorCodeDefinition {
     EMAIL_ALREADY_EXISTS("EMAIL_ALREADY_EXISTS", "Email already exists", HttpStatus.BAD_REQUEST),
     INVALID_REFRESH_TOKEN("INVALID_REFRESH_TOKEN", "Token is invalid", HttpStatus.UNAUTHORIZED ),
     INVALID_CREDENTIALS("INVALID_CREDENTIALS", "Invalid email/phone number or password", HttpStatus.UNAUTHORIZED),
+    EMAIL_NOT_VERIFIED("EMAIL_NOT_VERIFIED", "Email must be verified before login", HttpStatus.UNAUTHORIZED),
     ROLE_NOT_FOUND("ROLE_NOT_FOUND", "Role not found", HttpStatus.NOT_FOUND),
     // Add these to your AuthErrorCode enum
     INVALID_OR_EXPIRED_OTP("INVALID_OR_EXPIRED_OTP", "Invalid or expired OTP", HttpStatus.BAD_REQUEST),
@@ -18,7 +19,14 @@ public enum AuthErrorCode implements ErrorCodeDefinition {
     ACCOUNT_HAS_NO_PASSWORD("ACCOUNT_HAS_NO_PASSWORD", "Account has no password set", HttpStatus.BAD_REQUEST),
     ACCOUNT_ALREADY_HAS_PASSWORD("ACCOUNT_ALREADY_HAS_PASSWORD", "Account already has a password set", HttpStatus.BAD_REQUEST),
     CANNOT_DELETE_OWN_ACCOUNT("CANNOT_DELETE_OWN_ACCOUNT", "You cannot delete your own account", HttpStatus.BAD_REQUEST),
-    INVALID_NEW_EMAIL("INVALID_NEW_EMAIL", "New email is the same as the current email", HttpStatus.BAD_REQUEST);
+    INVALID_NEW_EMAIL("INVALID_NEW_EMAIL", "New email is the same as the current email", HttpStatus.BAD_REQUEST),
+
+    // Driver-related error codes
+    DRIVER_NOT_FOUND("DRIVER_NOT_FOUND", "Driver not found", HttpStatus.NOT_FOUND),
+    ACCOUNT_ALREADY_HAS_DRIVER("ACCOUNT_ALREADY_HAS_DRIVER", "Account is already associated with a driver", HttpStatus.BAD_REQUEST),
+    INVALID_LICENSE_NUMBER("INVALID_LICENSE_NUMBER", "Invalid license number", HttpStatus.BAD_REQUEST),
+    INVALID_LICENSE_CLASS("INVALID_LICENSE_CLASS", "Invalid license class", HttpStatus.BAD_REQUEST),
+    DEPOT_NOT_FOUND("DEPOT_NOT_FOUND", "Depot not found", HttpStatus.NOT_FOUND);
 
     private String code;
     private String defaultMessage;

@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import vn.edu.fpt.transitlink.identity.entity.Account;
 import vn.edu.fpt.transitlink.identity.entity.RefreshToken;
 import vn.edu.fpt.transitlink.identity.enumeration.AuthErrorCode;
-import vn.edu.fpt.transitlink.identity.repository.AccountRepository;
 import vn.edu.fpt.transitlink.identity.repository.RefreshTokenRepository;
 import vn.edu.fpt.transitlink.identity.security.JwtService;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
@@ -23,17 +22,12 @@ public class RefreshTokenImpl implements RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
 
-    private final AccountRepository accountRepository;
-
     private final JwtService jwtService;
 
     @Override
     public RefreshToken createRefreshToken(CustomUserPrincipal userPrincipal) {
-        Account account = accountRepository.findByEmail(userPrincipal.getUsername())
-                .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND,
-                        "Account not found for email: " + userPrincipal.getUsername()));
-
-
+        Account account = new Account();
+        account.setId(userPrincipal.getId());
 
         refreshTokenRepository.deleteByAccount(account);
 

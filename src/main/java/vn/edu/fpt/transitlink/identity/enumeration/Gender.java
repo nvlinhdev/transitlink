@@ -4,8 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 
 public enum Gender {
     MALE,
-    FEMALE,
-    OTHER;
+    FEMALE;
 
     @JsonCreator
     public static Gender from(String value) {

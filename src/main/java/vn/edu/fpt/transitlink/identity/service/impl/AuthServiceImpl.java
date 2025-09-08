@@ -47,6 +47,11 @@ public class AuthServiceImpl implements AuthService {
                     )
             );
             CustomUserPrincipal userPrincipal = (CustomUserPrincipal) authentication.getPrincipal();
+
+            if (!userPrincipal.getEmailVerified()) {
+                throw new BusinessException(AuthErrorCode.EMAIL_NOT_VERIFIED);
+            }
+
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(userPrincipal);
             return buildTokenData(userPrincipal, refreshToken);
 
@@ -56,7 +61,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public TokenData refresh(String requestRefreshToken){
+    public TokenData refresh(String requestRefreshToken) {
         try {
             RefreshToken refreshToken = refreshTokenService.findByToken(requestRefreshToken)
                     .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN));
@@ -73,7 +78,7 @@ public class AuthServiceImpl implements AuthService {
 
 
     @Override
-    public void logout(String refreshToken){
+    public void logout(String refreshToken) {
         refreshTokenService.deleteByToken(refreshToken);
     }
 
@@ -93,7 +98,6 @@ public class AuthServiceImpl implements AuthService {
         String firstName = (String) payload.get("given_name");
         String lastName = (String) payload.get("family_name");
         String avatarUrl = (String) payload.get("picture");
-        Boolean emailVerified = payload.getEmailVerified();
 
         Account account = accountRepository.findByEmail(email)
                 .orElseGet(() -> {
@@ -102,7 +106,8 @@ public class AuthServiceImpl implements AuthService {
                     newAcc.setFirstName(firstName);
                     newAcc.setLastName(lastName);
                     newAcc.setAvatarUrl(avatarUrl);
-                    newAcc.setEmailVerified(emailVerified != null && emailVerified);
+                    newAcc.setEmailVerified(true);
+                    newAcc.setProfileCompleted(false);
                     Role role = roleMapper.toEntity(roleService.findByName(RoleName.PASSENGER));
                     newAcc.setRoles(Set.of(role));
                     return accountRepository.save(newAcc);
@@ -111,6 +116,8 @@ public class AuthServiceImpl implements AuthService {
         CustomUserPrincipal userPrincipal = new CustomUserPrincipal(
                 account.getId(),
                 account.getEmail(),
+                account.getEmailVerified(),
+                account.getProfileCompleted(),
                 account.getPassword(),
                 account.getRoles()
                         .stream()

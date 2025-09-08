@@ -13,15 +13,16 @@ import java.util.UUID;
 @Setter
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "drivers")
+@Table(name = "drivers", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_driver_account_id", columnNames = {"account_id"})
+})
 public class Driver extends BaseSoftDeletableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     private String licenseNumber;
-    private LincenseClass lincenseClass;
-    @OneToOne
-    @JoinColumn(name = "account_id")
-    private Account account;
+    @Enumerated(EnumType.STRING)
+    private LincenseClass licenseClass;
+    private UUID accountId;
     private UUID depotId;
 }

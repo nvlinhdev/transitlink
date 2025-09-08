@@ -49,4 +49,8 @@ public interface AccountRepository extends SoftDeletableRepository<Account, UUID
     // Phương thức để đếm số lượng tài khoản đã bị xóa mềm
     @Query("SELECT COUNT(DISTINCT a) FROM Account a LEFT JOIN a.roles r WHERE a.isDeleted = true AND (r IS NULL OR r.name NOT IN :roleNames)")
     long countDeletedExcludingRoles(@Param("roleNames") Set<RoleName> roleNames);
+
+    // Phương thức để kiểm tra xem có tài khoản nào với role cụ thể hay không
+    @Query("SELECT COUNT(a) > 0 FROM Account a JOIN a.roles r WHERE a.isDeleted = false AND r.name = :roleName")
+    boolean existsByRoleName(@Param("roleName") RoleName roleName);
 }

@@ -26,6 +26,8 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new CustomUserPrincipal(
                 user.getId(),
                 user.getEmail(),
+                user.getEmailVerified(),
+                user.getProfileCompleted(),
                 user.getPassword(),
                 user.getRoles().stream()
                         .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))

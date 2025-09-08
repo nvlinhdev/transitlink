@@ -27,7 +27,7 @@ public class DataInitializer {
     @EventListener(ApplicationReadyEvent.class)
     public void initializeData() {
         initializeRoles();
-        initializeAdmin();
+        initializeManager();
     }
 
     private void initializeRoles() {
@@ -69,14 +69,22 @@ public class DataInitializer {
         System.out.println("Roles initialized successfully!");
     }
 
-    private void initializeAdmin() {
+    private void initializeManager() {
+        // Kiểm tra xem đã có người dùng nào với role MANAGER chưa
+        if (accountRepository.existsByRoleName(RoleName.MANAGER)) {
+            System.out.println("Manager users already exist. Skipping manager initialization.");
+            return;
+        }
+
         if (!accountRepository.existsByEmail("manager@example.com")) {
             Account manager = new Account();
             manager.setEmail("manager@example.com");
             manager.setPassword(passwordEncoder.encode("manager123"));
-            manager.setFirstName("Admin");
+            manager.setFirstName("Manager");
             manager.setLastName("User");
             manager.setPhoneNumber("1234567890");
+            manager.setEmailVerified(true);
+            manager.setProfileCompleted(true);
 
             // Khởi tạo roles để tránh NullPointerException
             manager.setRoles(new HashSet<>());
@@ -87,7 +95,7 @@ public class DataInitializer {
             manager.getRoles().add(managerRole);
 
             accountRepository.save(manager);
-            System.out.println("Admin user created: manager@example.com / manager123");
+            System.out.println("Manager user created: manager@example.com / manager123");
         }
     }
 }
