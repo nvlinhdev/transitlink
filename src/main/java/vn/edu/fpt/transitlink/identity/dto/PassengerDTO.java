@@ -4,8 +4,8 @@ import java.util.UUID;
 
 public record PassengerDTO(
         UUID id,
-        String name,
-        String phone,
-        String address,
-        String note
-) {}
+        Integer totalCompletedTrips,
+        Integer totalCancelledTrips,
+        AccountDTO account
+) {
+}

@@ -19,7 +19,5 @@ public class Passenger extends BaseSoftDeletableEntity {
     private UUID id;
     private Integer totalCompletedTrips;
     private Integer totalCancelledTrips;
-    @OneToOne
-    @JoinColumn(name = "account_id")
-    private Account account;
+    private UUID accountId;
 }

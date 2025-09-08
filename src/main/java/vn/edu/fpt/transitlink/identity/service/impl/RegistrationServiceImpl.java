@@ -58,7 +58,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         accountRepository.save(account);
 
         Passenger passenger = new Passenger();
-        passenger.setAccount(account);
+        passenger.setAccountId(account.getId());
         passenger.setTotalCompletedTrips(0);
         passenger.setTotalCancelledTrips(0);
         passengerRepository.save(passenger);

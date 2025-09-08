@@ -62,7 +62,7 @@ public class CustomOidcUserService extends OidcUserService {
                     Optional<Account> otpAccount = Optional.of(accountRepository.save(newAccount));
 
                     Passenger passengerEntity = new Passenger();
-                    passengerEntity.setAccount(otpAccount.get());
+                    passengerEntity.setAccountId(otpAccount.get().getId());
                     passengerEntity.setTotalCompletedTrips(0);
                     passengerEntity.setTotalCancelledTrips(0);
                     passengerRepository.save(passengerEntity);

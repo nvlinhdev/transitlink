@@ -26,7 +26,12 @@ public enum AuthErrorCode implements ErrorCodeDefinition {
     ACCOUNT_ALREADY_HAS_DRIVER("ACCOUNT_ALREADY_HAS_DRIVER", "Account is already associated with a driver", HttpStatus.BAD_REQUEST),
     INVALID_LICENSE_NUMBER("INVALID_LICENSE_NUMBER", "Invalid license number", HttpStatus.BAD_REQUEST),
     INVALID_LICENSE_CLASS("INVALID_LICENSE_CLASS", "Invalid license class", HttpStatus.BAD_REQUEST),
-    DEPOT_NOT_FOUND("DEPOT_NOT_FOUND", "Depot not found", HttpStatus.NOT_FOUND);
+    DEPOT_NOT_FOUND("DEPOT_NOT_FOUND", "Depot not found", HttpStatus.NOT_FOUND),
+
+    // Passenger-related error codes
+    PASSENGER_NOT_FOUND("PASSENGER_NOT_FOUND", "Passenger not found", HttpStatus.NOT_FOUND),
+    ACCOUNT_ALREADY_HAS_PASSENGER("ACCOUNT_ALREADY_HAS_PASSENGER", "Account is already associated with a passenger", HttpStatus.BAD_REQUEST),
+    INVALID_TRIP_COUNT("INVALID_TRIP_COUNT", "Trip count must be non-negative", HttpStatus.BAD_REQUEST);
 
     private String code;
     private String defaultMessage;
