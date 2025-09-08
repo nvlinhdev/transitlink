@@ -1,6 +1,6 @@
 @ApplicationModule(
         id = "trip",
-        displayName = "Trip",
+        displayName = "Trip Module",
         type = ApplicationModule.Type.CLOSED,
         allowedDependencies = {
                 "shared",

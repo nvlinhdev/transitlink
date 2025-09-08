@@ -1,6 +1,6 @@
 @ApplicationModule(
         id = "location",
-        displayName = "Location",
+        displayName = "Location Module",
         type = ApplicationModule.Type.CLOSED,
         allowedDependencies = {
                 "shared",

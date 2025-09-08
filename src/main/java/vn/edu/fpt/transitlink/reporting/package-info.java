@@ -1,6 +1,6 @@
 @ApplicationModule(
         id = "reporting",
-        displayName = "Reporting",
+        displayName = "Reporting Module",
         type = ApplicationModule.Type.CLOSED,
         allowedDependencies = {
                 "shared",

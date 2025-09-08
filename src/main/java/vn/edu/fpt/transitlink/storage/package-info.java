@@ -1,6 +1,6 @@
 @ApplicationModule(
         id = "storage",
-        displayName = "Storage",
+        displayName = "Storage Module",
         type = ApplicationModule.Type.CLOSED,
         allowedDependencies = {
                 "shared"

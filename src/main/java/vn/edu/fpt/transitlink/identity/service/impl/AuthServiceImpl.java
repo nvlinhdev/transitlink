@@ -48,7 +48,7 @@ public class AuthServiceImpl implements AuthService {
             );
             CustomUserPrincipal userPrincipal = (CustomUserPrincipal) authentication.getPrincipal();
 
-            if (!userPrincipal.getEmailVerified()) {
+            if (userPrincipal.getEmailVerified() == null || !userPrincipal.getEmailVerified()) {
                 throw new BusinessException(AuthErrorCode.EMAIL_NOT_VERIFIED);
             }
 

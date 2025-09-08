@@ -1,10 +1,9 @@
 @ApplicationModule(
         id = "notification",
-        displayName = "Notification",
+        displayName = "Notification Module",
         type = ApplicationModule.Type.CLOSED,
         allowedDependencies = {
-                "shared",
-                "firebase"
+                "shared"
         }
 )
 package vn.edu.fpt.transitlink.notification;
