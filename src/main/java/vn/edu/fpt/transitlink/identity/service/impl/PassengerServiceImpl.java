@@ -13,10 +13,9 @@ import vn.edu.fpt.transitlink.identity.dto.AccountDTO;
 import vn.edu.fpt.transitlink.identity.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.identity.entity.Passenger;
 import vn.edu.fpt.transitlink.identity.enumeration.AuthErrorCode;
-import vn.edu.fpt.transitlink.identity.enumeration.RoleName;
 import vn.edu.fpt.transitlink.identity.repository.PassengerRepository;
-import vn.edu.fpt.transitlink.identity.request.CreateAccountRequest;
 import vn.edu.fpt.transitlink.identity.request.CreatePassengerRequest;
+import vn.edu.fpt.transitlink.identity.request.ImportAccountRequest;
 import vn.edu.fpt.transitlink.identity.request.ImportPassengerRequest;
 import vn.edu.fpt.transitlink.identity.request.UpdatePassengerRequest;
 import vn.edu.fpt.transitlink.identity.service.AccountService;
@@ -25,8 +24,9 @@ import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -42,27 +42,20 @@ public class PassengerServiceImpl implements PassengerService {
     @Transactional
     public PassengerDTO createPassenger(CreatePassengerRequest request) {
         // Validate account exists
-        AccountDTO account = accountService.getAccountById(request.accountId());
+        AccountDTO account = accountService.getAccountByEmail(request.accountInfo().email());
 
-        // Check if account is already associated with a passenger
-        if (passengerRepository.existsByAccountId(request.accountId())) {
+        if (account == null) {
+            account = accountService.createAccount(request.accountInfo());
+        }
+
+        if (passengerRepository.findByAccountId(account.id()).isPresent()) {
             throw new BusinessException(AuthErrorCode.ACCOUNT_ALREADY_HAS_PASSENGER,
-                    "Account is already associated with a passenger");
-        }
-
-        // Validate trip counts if provided
-        if (request.totalCompletedTrips() != null && request.totalCompletedTrips() < 0) {
-            throw new BusinessException(AuthErrorCode.INVALID_TRIP_COUNT,
-                    "Total completed trips must be non-negative");
-        }
-        if (request.totalCancelledTrips() != null && request.totalCancelledTrips() < 0) {
-            throw new BusinessException(AuthErrorCode.INVALID_TRIP_COUNT,
-                    "Total cancelled trips must be non-negative");
+                    "Passenger profile already exists for this account");
         }
 
         // Create new passenger
         Passenger passenger = new Passenger();
-        passenger.setAccountId(request.accountId());
+        passenger.setAccountId(account.id());
         passenger.setTotalCompletedTrips(request.totalCompletedTrips() != null ? request.totalCompletedTrips() : 0);
         passenger.setTotalCancelledTrips(request.totalCancelledTrips() != null ? request.totalCancelledTrips() : 0);
 
@@ -90,24 +83,13 @@ public class PassengerServiceImpl implements PassengerService {
         Passenger passenger = passengerRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.PASSENGER_NOT_FOUND));
 
-        // Validate trip counts if provided
-        if (request.totalCompletedTrips() != null && request.totalCompletedTrips() < 0) {
-            throw new BusinessException(AuthErrorCode.INVALID_TRIP_COUNT,
-                    "Total completed trips must be non-negative");
-        }
-        if (request.totalCancelledTrips() != null && request.totalCancelledTrips() < 0) {
-            throw new BusinessException(AuthErrorCode.INVALID_TRIP_COUNT,
-                    "Total cancelled trips must be non-negative");
+        // Update account info if provided - delegate to AccountService
+        if (request.accountInfo() != null) {
+            accountService.updateAccount(passenger.getAccountId(), request.accountInfo());
         }
 
-        // Update passenger fields
-        if (request.totalCompletedTrips() != null) {
-            passenger.setTotalCompletedTrips(request.totalCompletedTrips());
-        }
-        if (request.totalCancelledTrips() != null) {
-            passenger.setTotalCancelledTrips(request.totalCancelledTrips());
-        }
-
+        passenger.setTotalCompletedTrips(request.totalCompletedTrips());
+        passenger.setTotalCancelledTrips(request.totalCancelledTrips());
         Passenger savedPassenger = passengerRepository.save(passenger);
 
         return mapToPassengerDTO(savedPassenger);
@@ -136,9 +118,9 @@ public class PassengerServiceImpl implements PassengerService {
         Passenger savedPassenger = passengerRepository.save(passenger);
 
         // Also delete the associated account
-        accountService.deleteAccount(passenger.getAccountId(), deletedBy);
+        AccountDTO deletedAccount = accountService.deleteAccount(passenger.getAccountId(), deletedBy);
 
-        return mapToPassengerDTO(savedPassenger);
+        return mapToPassengerDTO(savedPassenger, deletedAccount);
     }
 
     @Caching(
@@ -158,9 +140,9 @@ public class PassengerServiceImpl implements PassengerService {
         Passenger savedPassenger = passengerRepository.save(passenger);
 
         // Also restore the associated account
-        accountService.restoreAccount(passenger.getAccountId());
+        AccountDTO restoredAccount = accountService.restoreAccount(passenger.getAccountId());
 
-        return mapToPassengerDTO(savedPassenger);
+        return mapToPassengerDTO(savedPassenger, restoredAccount);
     }
 
     @Cacheable(value = "passengersPage", key = "'page:' + #page + ':size:' + #size")
@@ -184,7 +166,7 @@ public class PassengerServiceImpl implements PassengerService {
         Pageable pageable = PageRequest.of(page, size);
         return passengerRepository.findAllDeleted(pageable)
                 .stream()
-                .map(passenger -> mapToPassengerDTO(passenger))
+                .map(this::mapToPassengerDTO)
                 .toList();
     }
 
@@ -217,27 +199,14 @@ public class PassengerServiceImpl implements PassengerService {
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.PASSENGER_NOT_FOUND,
                         "No passenger profile found for this account"));
 
-        // Validate trip counts if provided
-        if (request.totalCompletedTrips() != null && request.totalCompletedTrips() < 0) {
-            throw new BusinessException(AuthErrorCode.INVALID_TRIP_COUNT,
-                    "Total completed trips must be non-negative");
-        }
-        if (request.totalCancelledTrips() != null && request.totalCancelledTrips() < 0) {
-            throw new BusinessException(AuthErrorCode.INVALID_TRIP_COUNT,
-                    "Total cancelled trips must be non-negative");
-        }
+        AccountDTO updatedAccount = accountService.updateAccount(passenger.getAccountId(), request.accountInfo());
 
-        // Update passenger fields
-        if (request.totalCompletedTrips() != null) {
-            passenger.setTotalCompletedTrips(request.totalCompletedTrips());
-        }
-        if (request.totalCancelledTrips() != null) {
-            passenger.setTotalCancelledTrips(request.totalCancelledTrips());
-        }
+        passenger.setTotalCompletedTrips(request.totalCompletedTrips());
+        passenger.setTotalCancelledTrips(request.totalCancelledTrips());
 
         Passenger savedPassenger = passengerRepository.save(passenger);
 
-        return mapToPassengerDTO(savedPassenger);
+        return mapToPassengerDTO(savedPassenger, updatedAccount);
     }
 
     @Caching(
@@ -277,155 +246,82 @@ public class PassengerServiceImpl implements PassengerService {
     }
 
     @Caching(
-            put = {@CachePut(value = "passengersById", key = "#passengerId")},
             evict = {@CacheEvict(value = "passengersPage", allEntries = true)}
     )
     @Override
     @Transactional
-    public PassengerDTO setTotalCompletedTrips(UUID passengerId, Integer totalTrips) {
-        if (totalTrips < 0) {
-            throw new BusinessException(AuthErrorCode.INVALID_TRIP_COUNT,
-                    "Total completed trips must be non-negative");
+    public List<PassengerDTO> importPassengers(List<ImportPassengerRequest> requests) {
+        if (requests.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        Passenger passenger = passengerRepository.findById(passengerId)
-                .orElseThrow(() -> new BusinessException(AuthErrorCode.PASSENGER_NOT_FOUND));
+        // Step 1: Extract account info and import accounts in bulk
+        List<ImportAccountRequest> accountRequests = requests.stream()
+                .map(ImportPassengerRequest::accountInfo)
+                .toList();
 
-        passenger.setTotalCompletedTrips(totalTrips);
+        // Bulk import accounts (returns existing + newly created accounts)
+        List<AccountDTO> accountResults = accountService.importAccounts(accountRequests);
 
-        Passenger savedPassenger = passengerRepository.save(passenger);
+        // Step 2: Extract account IDs from the imported accounts
+        List<UUID> accountIds = accountResults.stream()
+                .map(AccountDTO::id)
+                .toList();
 
-        return mapToPassengerDTO(savedPassenger);
-    }
+        // Step 3: Bulk check which accounts already have passengers
+        List<Passenger> existingPassengers = passengerRepository.findByAccountIdsIn(accountIds);
 
-    @Caching(
-            put = {@CachePut(value = "passengersById", key = "#passengerId")},
-            evict = {@CacheEvict(value = "passengersPage", allEntries = true)}
-    )
-    @Override
-    @Transactional
-    public PassengerDTO setTotalCancelledTrips(UUID passengerId, Integer totalTrips) {
-        if (totalTrips < 0) {
-            throw new BusinessException(AuthErrorCode.INVALID_TRIP_COUNT,
-                    "Total cancelled trips must be non-negative");
-        }
+        // Create lookup map for existing passengers by accountId
+        Map<UUID, Passenger> existingPassengerMap = existingPassengers.stream()
+                .collect(Collectors.toMap(
+                        Passenger::getAccountId,
+                        passenger -> passenger,
+                        (existing, replacement) -> existing // Keep existing if duplicate
+                ));
 
-        Passenger passenger = passengerRepository.findById(passengerId)
-                .orElseThrow(() -> new BusinessException(AuthErrorCode.PASSENGER_NOT_FOUND));
+        List<PassengerDTO> results = new ArrayList<>();
+        List<Passenger> newPassengersToSave = new ArrayList<>();
 
-        passenger.setTotalCancelledTrips(totalTrips);
+        // Step 4: Process each import request
+        for (int i = 0; i < requests.size(); i++) {
+            ImportPassengerRequest request = requests.get(i);
+            AccountDTO account = accountResults.get(i);
+            UUID accountId = account.id();
 
-        Passenger savedPassenger = passengerRepository.save(passenger);
+            Passenger existingPassenger = existingPassengerMap.get(accountId);
 
-        return mapToPassengerDTO(savedPassenger);
-    }
-
-    @Caching(
-            put = {@CachePut(value = "passengersById", key = "#passengerId")},
-            evict = {@CacheEvict(value = "passengersPage", allEntries = true)}
-    )
-    @Override
-    @Transactional
-    public PassengerDTO resetTripStatistics(UUID passengerId) {
-        Passenger passenger = passengerRepository.findById(passengerId)
-                .orElseThrow(() -> new BusinessException(AuthErrorCode.PASSENGER_NOT_FOUND));
-
-        passenger.setTotalCompletedTrips(0);
-        passenger.setTotalCancelledTrips(0);
-
-        Passenger savedPassenger = passengerRepository.save(passenger);
-
-        return mapToPassengerDTO(savedPassenger);
-    }
-
-    @Caching(
-            evict = {@CacheEvict(value = "passengersPage", allEntries = true)}
-    )
-    @Override
-    @Transactional
-    public List<PassengerDTO> importPassengers(List<CreatePassengerRequest> requests) {
-        List<PassengerDTO> createdPassengers = new ArrayList<>();
-
-        for (CreatePassengerRequest request : requests) {
-            try {
-                PassengerDTO passenger = createPassenger(request);
-                createdPassengers.add(passenger);
-            } catch (BusinessException e) {
-                // Log the error and continue with next passenger
-                // You might want to return a result object with success/failure details
-                // For now, we skip failed imports
+            if (existingPassenger != null) {
+                // Passenger already exists, return existing one
+                results.add(mapToPassengerDTO(existingPassenger, account));
+            } else {
+                // Create new passenger
+                Passenger newPassenger = createNewPassengerFromImport(request, accountId);
+                newPassengersToSave.add(newPassenger);
+                results.add(mapToPassengerDTO(newPassenger, account));
             }
         }
 
-        return createdPassengers;
-    }
-
-    @Caching(
-            evict = {@CacheEvict(value = "passengersPage", allEntries = true)}
-    )
-    @Override
-    @Transactional
-    public List<PassengerDTO> importPassengersWithAccountData(List<ImportPassengerRequest> requests) {
-        List<PassengerDTO> createdPassengers = new ArrayList<>();
-
-        for (ImportPassengerRequest request : requests) {
-            try {
-                // Create account first
-                CreateAccountRequest accountRequest = new CreateAccountRequest(
-                        request.email(),
-                        request.password() != null ? request.password() : "TempPassword123!", // Default password if not provided
-                        request.firstName(),
-                        request.lastName(),
-                        request.gender(),
-                        request.birthDate(),
-                        request.phoneNumber(),
-                        request.zaloPhoneNumber(),
-                        request.avatarUrl(),
-                        Set.of(RoleName.PASSENGER) // Default role for passengers
-                );
-
-                AccountDTO createdAccount = accountService.createAccount(accountRequest);
-
-                // Create passenger with the new account ID
-                CreatePassengerRequest passengerRequest = new CreatePassengerRequest(
-                        createdAccount.id(),
-                        request.totalCompletedTrips() != null ? request.totalCompletedTrips() : 0,
-                        request.totalCancelledTrips() != null ? request.totalCancelledTrips() : 0
-                );
-
-                PassengerDTO passenger = createPassenger(passengerRequest);
-                createdPassengers.add(passenger);
-
-                // Send verification email if requested
-                if (request.sendVerificationEmail() != null && request.sendVerificationEmail()) {
-                    // This would typically be handled by the auth service or email service
-                    // For now, we'll assume the account creation process handles this
-                }
-
-            } catch (BusinessException e) {
-                // Log the error and continue with next passenger
-                // You might want to return a result object with success/failure details
-                // For now, we skip failed imports
-            }
+        // Step 5: Bulk insert new passengers
+        if (!newPassengersToSave.isEmpty()) {
+            passengerRepository.saveAll(newPassengersToSave);
         }
 
-        return createdPassengers;
+        return results;
     }
 
-    @Override
-    @Transactional
-    public PassengerDTO getOrCreatePassengerByAccountId(UUID accountId) {
-        // Try to find existing passenger first
-        try {
-            return getCurrentPassengerByAccountId(accountId);
-        } catch (BusinessException e) {
-            if (e.getErrorCode() == AuthErrorCode.PASSENGER_NOT_FOUND) {
-                // Create new passenger if not found
-                CreatePassengerRequest request = new CreatePassengerRequest(accountId, 0, 0);
-                return createPassenger(request);
-            }
-            throw e; // Re-throw other exceptions
-        }
+    private Passenger createNewPassengerFromImport(ImportPassengerRequest request, UUID accountId) {
+        Passenger passenger = new Passenger();
+        passenger.setAccountId(accountId);
+
+        // Set trip statistics with defaults
+        passenger.setTotalCompletedTrips(
+                request.totalCompletedTrips() != null ? request.totalCompletedTrips() : 0
+        );
+        passenger.setTotalCancelledTrips(
+                request.totalCancelledTrips() != null ? request.totalCancelledTrips() : 0
+        );
+
+        return passenger;
     }
 
     /**

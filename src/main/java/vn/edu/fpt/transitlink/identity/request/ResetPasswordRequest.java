@@ -14,6 +14,7 @@ public record ResetPasswordRequest(
 
         @Schema(example = "user@example.com", description = "Email address associated with the account")
         @Email(message = "Email format is invalid")
+        @NotBlank(message = "Email cannot be blank")
         String email,
 
         @Schema(example = "123456", description = "6-digit OTP code received via email")

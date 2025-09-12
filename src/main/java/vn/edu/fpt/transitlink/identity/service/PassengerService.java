@@ -29,12 +29,7 @@ public interface PassengerService {
     // Trip statistics management
     PassengerDTO incrementCompletedTrips(UUID passengerId);
     PassengerDTO incrementCancelledTrips(UUID passengerId);
-    PassengerDTO setTotalCompletedTrips(UUID passengerId, Integer totalTrips);
-    PassengerDTO setTotalCancelledTrips(UUID passengerId, Integer totalTrips);
-    PassengerDTO resetTripStatistics(UUID passengerId);
 
     // Bulk operations
-    List<PassengerDTO> importPassengers(List<CreatePassengerRequest> requests);
-    List<PassengerDTO> importPassengersWithAccountData(List<ImportPassengerRequest> requests);
-    PassengerDTO getOrCreatePassengerByAccountId(UUID accountId);
+    List<PassengerDTO> importPassengers(List<ImportPassengerRequest> requests);
 }

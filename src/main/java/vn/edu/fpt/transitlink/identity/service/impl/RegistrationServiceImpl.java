@@ -47,16 +47,17 @@ public class RegistrationServiceImpl implements RegistrationService {
         account.setPassword(passwordEncoder.encode(request.password()));
         account.setFirstName(request.firstName());
         account.setLastName(request.lastName());
-        account.setPhoneNumber(request.phoneNumber());
-        account.setEmailVerified(false);
         account.setGender(request.gender());
         account.setBirthDate(request.birthDate());
-        account.setAvatarUrl(request.avatarUrl());
+        account.setPhoneNumber(request.phoneNumber());
         account.setZaloPhoneNumber(request.zaloPhoneNumber());
+        account.setAvatarUrl(request.avatarUrl());
+        account.setProfileCompleted(account.isProfileCompleted());
         Role role = roleMapper.toEntity(roleService.findByName(RoleName.PASSENGER));
         account.setRoles(Set.of(role));
-        accountRepository.save(account);
+        account.setEmailVerified(false);
 
+        accountRepository.save(account);
         Passenger passenger = new Passenger();
         passenger.setAccountId(account.getId());
         passenger.setTotalCompletedTrips(0);
@@ -86,7 +87,8 @@ public class RegistrationServiceImpl implements RegistrationService {
         }
 
         boolean verified = switch (request.method()) {
-            case OTP -> verificationService.verifyOtp(request.email(), request.otp(), VerificationType.ACCOUNT_ACTIVATION);
+            case OTP ->
+                    verificationService.verifyOtp(request.email(), request.otp(), VerificationType.ACCOUNT_ACTIVATION);
             case LINK -> verificationService.verifyToken(request.token(), VerificationType.ACCOUNT_ACTIVATION);
         };
 

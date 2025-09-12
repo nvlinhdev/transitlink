@@ -9,14 +9,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.edu.fpt.transitlink.identity.enumeration.RoleName;
 import vn.edu.fpt.transitlink.identity.enumeration.VerificationType;
+import vn.edu.fpt.transitlink.identity.enumeration.NotificationType;
 import vn.edu.fpt.transitlink.identity.mapper.AccountMapper;
 import vn.edu.fpt.transitlink.identity.mapper.RoleMapper;
 import vn.edu.fpt.transitlink.identity.repository.AccountRepository;
 import vn.edu.fpt.transitlink.identity.request.CreateAccountRequest;
+import vn.edu.fpt.transitlink.identity.request.ImportAccountRequest;
 import vn.edu.fpt.transitlink.identity.request.InitiateEmailChangeRequest;
 import vn.edu.fpt.transitlink.identity.request.UpdateAccountRequest;
 import vn.edu.fpt.transitlink.identity.request.UpdateCurrentUserRequest;
 import vn.edu.fpt.transitlink.identity.request.VerifyEmailChangeRequest;
+import vn.edu.fpt.transitlink.identity.service.AccountNotificationService;
 import vn.edu.fpt.transitlink.identity.service.AccountService;
 import vn.edu.fpt.transitlink.identity.dto.*;
 import vn.edu.fpt.transitlink.identity.entity.Account;
@@ -42,6 +45,7 @@ public class AccountServiceImpl implements AccountService {
     private final AccountMapper accountMapper;
     private final PasswordEncoder passwordEncoder;
     private final VerificationService verificationService;
+    private final AccountNotificationService notificationService;
 
     @Caching(
             put   = { @CachePut(value = "accountsById", key = "#result.id") },
@@ -49,18 +53,20 @@ public class AccountServiceImpl implements AccountService {
     )
     @Override
     public AccountDTO createAccount(CreateAccountRequest dto) {
+
+        String randomPassword = UUID.randomUUID().toString().substring(0, 8);
+
         Account account = new Account();
         account.setEmail(dto.email());
-        account.setPassword(passwordEncoder.encode(dto.password()));
+        account.setPassword(passwordEncoder.encode(randomPassword));
         account.setFirstName(dto.firstName());
         account.setLastName(dto.lastName());
         account.setGender(dto.gender());
         account.setBirthDate(dto.birthDate());
         account.setPhoneNumber(dto.phoneNumber());
         account.setZaloPhoneNumber(dto.zaloPhoneNumber());
-        account.setAvatarUrl(dto.avatarUrl());
-        account.setEmailVerified(false);
-        account.setProfileCompleted(false);
+        account.setEmailVerified(true);
+        account.setProfileCompleted(account.isProfileCompleted());
         if (dto.roles() != null) {
             Set<Role> roles = dto.roles().stream()
                             .map(roleService::findByName)
@@ -70,6 +76,10 @@ public class AccountServiceImpl implements AccountService {
         }
 
         Account saved = accountRepository.save(account);
+
+        // Gửi email thông báo tài khoản mới được tạo
+        sendAccountCreatedNotification(saved, randomPassword);
+
         return accountMapper.toDTO(saved);
     }
 
@@ -89,14 +99,42 @@ public class AccountServiceImpl implements AccountService {
     public AccountDTO updateAccount(UUID id, UpdateAccountRequest dto) {
         Account account = accountRepository.findById(id)
             .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
-        account.setFirstName(dto.firstName());
-        account.setLastName(dto.lastName());
-        account.setGender(dto.gender());
-        account.setBirthDate(dto.birthDate());
-        account.setPhoneNumber(dto.phoneNumber());
-        account.setZaloPhoneNumber(dto.zaloPhoneNumber());
-        account.setAvatarUrl(dto.avatarUrl());
-        account.setProfileCompleted(true);
+
+        if(dto.email() != null && !dto.email().equalsIgnoreCase(account.getEmail())) {
+            // Kiểm tra email mới đã tồn tại chưa
+            boolean emailExists = accountRepository.existsByEmail(dto.email());
+            if (emailExists) {
+                throw new BusinessException(AuthErrorCode.EMAIL_ALREADY_EXISTS, "Email is already in use");
+            }
+            account.setEmail(dto.email());
+        }
+
+        if(dto.firstName() != null && !dto.firstName().equalsIgnoreCase(account.getFirstName())) {
+            account.setFirstName(dto.firstName());
+        }
+
+        if(dto.lastName() != null && !dto.lastName().equalsIgnoreCase(account.getLastName())) {
+            account.setLastName(dto.lastName());
+        }
+
+        if(dto.gender() != null && !dto.gender().equals(account.getGender())) {
+            account.setGender(dto.gender());
+        }
+
+        if (dto.birthDate() != null && !dto.birthDate().equals(account.getBirthDate())) {
+            account.setBirthDate(dto.birthDate());
+        }
+
+        if(dto.phoneNumber() != null && !dto.phoneNumber().equalsIgnoreCase(account.getPhoneNumber())) {
+            account.setPhoneNumber(dto.phoneNumber());
+        }
+
+        if(dto.zaloPhoneNumber() != null && !dto.zaloPhoneNumber().equalsIgnoreCase(account.getZaloPhoneNumber())) {
+            account.setZaloPhoneNumber(dto.zaloPhoneNumber());
+        }
+
+        account.setEmailVerified(true);
+        account.setProfileCompleted(account.isProfileCompleted());
         if (dto.roles() != null) {
             Set<Role> roles = dto.roles().stream()
                     .map(roleService::findByName)
@@ -178,6 +216,7 @@ public class AccountServiceImpl implements AccountService {
         account.setPhoneNumber(dto.phoneNumber());
         account.setZaloPhoneNumber(dto.zaloPhoneNumber());
         account.setAvatarUrl(dto.avatarUrl());
+        account.setProfileCompleted(account.isProfileCompleted());
 
         Account saved = accountRepository.save(account);
         return accountMapper.toDTO(saved);
@@ -261,5 +300,115 @@ public class AccountServiceImpl implements AccountService {
 
         // Xóa vĩnh viễn tài khoản
         accountRepository.delete(account);
+    }
+
+    @Override
+    public AccountDTO getAccountByEmail(String email) {
+        return accountRepository.findByEmail(email)
+                .map(accountMapper::toDTO)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> resendAccountCreatedNotification(UUID accountId) {
+        Account account = accountRepository.findById(accountId)
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+
+        // Tạo mật khẩu tạm thời mới
+        String newPassword = UUID.randomUUID().toString().substring(0, 8);
+        account.setPassword(passwordEncoder.encode(newPassword));
+        accountRepository.save(account);
+
+        return sendAccountCreatedNotification(account, newPassword);
+    }
+
+    private CompletableFuture<Boolean> sendAccountCreatedNotification(Account account, String rawPassword) {
+        Map<String, Object> templateVariables = new HashMap<>();
+        templateVariables.put("name", account.getFirstName() + " " + account.getLastName());
+        templateVariables.put("email", account.getEmail());
+        templateVariables.put("password", rawPassword);
+
+        return notificationService.sendNotificationEmail(
+            account.getEmail(),
+            NotificationType.ACCOUNT_CREATED,
+            templateVariables
+        );
+    }
+
+    @Override
+    public List<AccountDTO> importAccounts(List<ImportAccountRequest> importRequests) {
+        if (importRequests.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Bulk check tất cả emails có tồn tại không
+        List<String> emails = importRequests.stream()
+                .map(ImportAccountRequest::email)
+                .toList();
+
+        List<Account> existingAccounts = accountRepository.findByEmailsIn(emails);
+
+        // Tạo map để lookup nhanh accounts có sẵn theo email
+        Map<String, Account> existingAccountMap = existingAccounts.stream()
+                .collect(Collectors.toMap(
+                        Account::getEmail,
+                        account -> account,
+                        (existing, replacement) -> existing // Keep existing if duplicate
+                ));
+
+        List<AccountDTO> results = new ArrayList<>();
+        List<Account> newAccountsToSave = new ArrayList<>();
+        Map<String, String> accountPasswordMap = new HashMap<>(); // To store raw passwords
+
+        for (ImportAccountRequest importRequest : importRequests) {
+            Account existingAccount = existingAccountMap.get(importRequest.email());
+
+            if (existingAccount != null) {
+                // Nếu đã tồn tại, sử dụng account có sẵn
+                results.add(accountMapper.toDTO(existingAccount));
+            } else {
+                // Nếu chưa tồn tại, chuẩn bị để bulk insert
+                String rawPassword = UUID.randomUUID().toString().substring(0, 8);
+                Account newAccount = createNewAccountFromImport(importRequest, rawPassword);
+                newAccountsToSave.add(newAccount);
+                accountPasswordMap.put(newAccount.getEmail(), rawPassword);
+                results.add(accountMapper.toDTO(newAccount));
+            }
+        }
+
+        // Bulk insert các accounts mới
+        if (!newAccountsToSave.isEmpty()) {
+            List<Account> savedAccounts = accountRepository.saveAll(newAccountsToSave);
+
+            savedAccounts.stream()
+                    .map(account -> {
+                        String rawPassword = accountPasswordMap.get(account.getEmail());
+                        return sendAccountCreatedNotification(account, rawPassword);
+                    })
+                    .toList();
+        }
+
+        return results;
+    }
+
+    private Account createNewAccountFromImport(ImportAccountRequest importRequest, String rawPassword) {
+        // Map basic fields
+        Account account = accountMapper.toEntity(importRequest);
+
+        // Set manually managed fields
+        account.setPassword(passwordEncoder.encode(rawPassword));
+        account.setEmailVerified(true);
+        account.setProfileCompleted(account.isProfileCompleted());
+
+        // Convert and set roles if provided
+        if (importRequest.roles() != null && !importRequest.roles().isEmpty()) {
+            Set<Role> roles = importRequest.roles().stream()
+                    .map(roleService::findByName)
+                    .map(roleMapper::toEntity)
+                    .collect(Collectors.toSet());
+            account.setRoles(roles);
+        }
+
+        return account;
     }
 }

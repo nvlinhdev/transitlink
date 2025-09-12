@@ -1,11 +1,9 @@
 package vn.edu.fpt.transitlink.identity.service;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import vn.edu.fpt.transitlink.identity.dto.*;
-import vn.edu.fpt.transitlink.identity.request.CreateAccountRequest;
-import vn.edu.fpt.transitlink.identity.request.InitiateEmailChangeRequest;
-import vn.edu.fpt.transitlink.identity.request.UpdateAccountRequest;
-import vn.edu.fpt.transitlink.identity.request.UpdateCurrentUserRequest;
-import vn.edu.fpt.transitlink.identity.request.VerifyEmailChangeRequest;
+import vn.edu.fpt.transitlink.identity.request.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,4 +27,11 @@ public interface AccountService {
     // Phương thức mới để lấy danh sách các tài khoản đã bị xóa mềm
     List<AccountDTO> getDeletedAccounts(int page, int size);
     long countDeletedAccounts();
+
+    AccountDTO getAccountByEmail(@NotBlank(message = "Email cannot be blank") @Email(message = "Invalid email format") String email);
+
+    // Phương thức gửi lại email thông báo tài khoản được tạo
+    CompletableFuture<Boolean> resendAccountCreatedNotification(UUID accountId);
+
+    List<AccountDTO> importAccounts(List<ImportAccountRequest> importRequests);
 }

@@ -1,4 +1,63 @@
 package vn.edu.fpt.transitlink.trip.service;
 
+import org.springframework.web.multipart.MultipartFile;
+import vn.edu.fpt.transitlink.trip.dto.ImportResultDTO;
+import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
+import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
+import vn.edu.fpt.transitlink.trip.request.CreatePassengerJourneyRequest;
+import vn.edu.fpt.transitlink.trip.request.SearchPassengerJourneyRequest;
+import vn.edu.fpt.transitlink.trip.request.UpdatePassengerJourneyRequest;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
 public interface PassengerJourneyService {
+
+    // CRUD Operations
+    PassengerJourneyDTO createPassengerJourney(CreatePassengerJourneyRequest request);
+    PassengerJourneyDTO getPassengerJourneyById(UUID id);
+    PassengerJourneyDTO updatePassengerJourney(UUID id, UpdatePassengerJourneyRequest request);
+    PassengerJourneyDTO deletePassengerJourney(UUID id, UUID deletedBy);
+    PassengerJourneyDTO restorePassengerJourney(UUID id);
+
+    // List and paginate operations
+    List<PassengerJourneyDTO> getPassengerJourneys(int page, int size);
+    long countPassengerJourneys();
+    List<PassengerJourneyDTO> getDeletedPassengerJourneys(int page, int size);
+    long countDeletedPassengerJourneys();
+
+    // Status-based filtering
+    List<PassengerJourneyDTO> getPassengerJourneysByStatus(JourneyStatus status, int page, int size);
+    List<PassengerJourneyDTO> getUnscheduledJourneys(int page, int size);
+
+    // Date-based queries for dispatchers
+    List<PassengerJourneyDTO> getJourneysByDateRange(OffsetDateTime startDate, OffsetDateTime endDate, int page, int size);
+    List<PassengerJourneyDTO> getJourneysForToday(int page, int size);
+    List<PassengerJourneyDTO> getJourneysForWeek(OffsetDateTime weekStart, int page, int size);
+    List<PassengerJourneyDTO> getJourneysForMonth(int year, int month, int page, int size);
+
+    // Passenger-specific operations
+    List<PassengerJourneyDTO> getCurrentPassengerJourneys(UUID passengerId, int page, int size);
+    List<PassengerJourneyDTO> getPassengerCompletedJourneys(UUID passengerId, int page, int size);
+    List<PassengerJourneyDTO> getPassengerCancelledJourneys(UUID passengerId, int page, int size);
+    List<PassengerJourneyDTO> getPassengerJourneyHistory(UUID passengerId, int page, int size);
+
+    // Search operations
+    List<PassengerJourneyDTO> searchPassengerJourneys(SearchPassengerJourneyRequest request, int page, int size);
+    List<PassengerJourneyDTO> searchByPassengerNameOrEmail(String query, int page, int size);
+
+    // Bulk operations
+    ImportResultDTO importPassengerJourneysFromExcel(MultipartFile file);
+
+    // Route service integration methods
+    PassengerJourneyDTO assignRoute(UUID journeyId, UUID routeId);
+    PassengerJourneyDTO updateJourneyStatus(UUID journeyId, JourneyStatus status);
+    PassengerJourneyDTO setActualPickupTime(UUID journeyId, OffsetDateTime pickupTime);
+    PassengerJourneyDTO setActualDropoffTime(UUID journeyId, OffsetDateTime dropoffTime);
+    List<PassengerJourneyDTO> getJourneysForRoute(UUID routeId);
+
+    // Statistics
+    long countJourneysByStatus(JourneyStatus status);
+    long countJourneysByPassenger(UUID passengerId);
 }

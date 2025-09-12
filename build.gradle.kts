@@ -116,8 +116,8 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openApiVersion")
     // Firebase
     implementation("com.google.firebase:firebase-admin:$firebaseAdminVersion")
-    // Hibernate Spatial
-//    implementation("org.hibernate.orm:hibernate-spatial:$spatialVersion")
+    //  Access Microsoft Format Files
+    implementation("org.apache.poi:poi-ooxml:5.4.1")
     // MapStruct
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
     // PostgreSQL

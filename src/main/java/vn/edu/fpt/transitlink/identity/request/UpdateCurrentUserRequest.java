@@ -8,7 +8,7 @@ import vn.edu.fpt.transitlink.identity.enumeration.Gender;
 import java.time.LocalDate;
 
 public record UpdateCurrentUserRequest(
-    @Schema(example = "Linh")
+    @Schema(example = "Nguyen")
     @Pattern(
             regexp = "^[\\p{L}]+( [\\p{L}]+)*$",
             message = "First name is invalid. Only letters and spaces are allowed."
@@ -16,7 +16,7 @@ public record UpdateCurrentUserRequest(
     @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
     String firstName,
 
-    @Schema(example = "Nguyen")
+    @Schema(example = "Van A")
     @Pattern(
             regexp = "^[\\p{L}]+( [\\p{L}]+)*$",
             message = "Last name is invalid. Only letters and spaces are allowed."

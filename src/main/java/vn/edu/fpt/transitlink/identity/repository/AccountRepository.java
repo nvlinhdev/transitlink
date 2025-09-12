@@ -11,6 +11,7 @@ import vn.edu.fpt.transitlink.identity.enumeration.RoleName;
 import vn.edu.fpt.transitlink.shared.base.SoftDeletableRepository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -50,7 +51,12 @@ public interface AccountRepository extends SoftDeletableRepository<Account, UUID
     @Query("SELECT COUNT(DISTINCT a) FROM Account a LEFT JOIN a.roles r WHERE a.isDeleted = true AND (r IS NULL OR r.name NOT IN :roleNames)")
     long countDeletedExcludingRoles(@Param("roleNames") Set<RoleName> roleNames);
 
+    // Bulk email checking for import operations
+    @Query("SELECT a FROM Account a WHERE a.email IN :emails AND a.isDeleted = false")
+    List<Account> findByEmailsIn(@Param("emails") List<String> emails);
+
     // Phương thức để kiểm tra xem có tài khoản nào với role cụ thể hay không
     @Query("SELECT COUNT(a) > 0 FROM Account a JOIN a.roles r WHERE a.isDeleted = false AND r.name = :roleName")
     boolean existsByRoleName(@Param("roleName") RoleName roleName);
+
 }

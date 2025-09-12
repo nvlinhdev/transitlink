@@ -42,4 +42,33 @@ public class Account extends BaseSoftDeletableEntity {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     @JsonManagedReference
     private Set<Role> roles;
+
+    // Setter có logic normalize
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = normalizeVietnamPhone(phoneNumber);
+    }
+
+    public void setZaloPhoneNumber(String zaloPhoneNumber) {
+        this.zaloPhoneNumber = normalizeVietnamPhone(zaloPhoneNumber);
+    }
+
+    private String normalizeVietnamPhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        String cleaned = phone.replaceAll("[^0-9+]", "");
+        if (cleaned.startsWith("+84")) {
+            return cleaned;
+        } else if (cleaned.startsWith("84")) {
+            return "+" + cleaned;
+        } else if (cleaned.startsWith("0")) {
+            return "+84" + cleaned.substring(1);
+        } else {
+            return "+84" + cleaned;
+        }
+    }
+
+    public boolean isProfileCompleted() {
+        return phoneNumber != null && zaloPhoneNumber != null;
+    }
 }

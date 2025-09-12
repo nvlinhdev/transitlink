@@ -1,19 +1,20 @@
 package vn.edu.fpt.transitlink.identity.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-import java.util.UUID;
 
 public record CreatePassengerRequest(
         @NotNull(message = "Account ID is required")
-        @Schema(description = "ID of the account to associate with this passenger", example = "a573aa20-f56b-4888-8b5b-88a7ad21b928")
-        UUID accountId,
+        CreateAccountRequest accountInfo,
 
-        @Schema(description = "Initial number of completed trips", example = "0")
+        @Schema(example = "10", description = "Total completed trips for the passenger")
+        @Min(value = 0, message = "Total completed trips must be non-negative")
         Integer totalCompletedTrips,
 
-        @Schema(description = "Initial number of cancelled trips", example = "0")
+        @Schema(example = "2", description = "Total cancelled trips for the passenger")
+        @Min(value = 0, message = "Total cancelled trips must be non-negative")
         Integer totalCancelledTrips
 ) {
 }

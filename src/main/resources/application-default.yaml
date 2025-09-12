@@ -177,5 +177,7 @@ springdoc:
       paths: /api/location/**
     - group: fleet
       paths: /api/fleet/**
+    - group: trip
+      paths: /api/trip/**
     - group: storage
       paths: /api/storage/**

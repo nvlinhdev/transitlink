@@ -1,10 +1,7 @@
 package vn.edu.fpt.transitlink.identity.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import vn.edu.fpt.transitlink.identity.enumeration.VerifyMethod;
 
 public record VerifyEmailRequest(
@@ -14,6 +11,7 @@ public record VerifyEmailRequest(
 
         @Schema(example = "user@example.com", description = "Email address to verify")
         @Email(message = "Email should be valid")
+        @NotBlank(message = "Email cannot be blank")
         String email,
 
         @Schema(example = "123456", description = "6-digit OTP code")

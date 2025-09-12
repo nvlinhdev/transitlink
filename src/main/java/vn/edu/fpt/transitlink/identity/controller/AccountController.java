@@ -39,6 +39,20 @@ public class AccountController {
         return ResponseEntity.status(201).body(StandardResponse.created(result));
     }
 
+
+    @Operation(summary = "Resend account created notification",
+            description = "Resend account creation notification email with new temporary password"
+    )
+    @PostMapping("/{id}/resend-notification")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<StandardResponse<String>> resendAccountCreatedNotification(@PathVariable UUID id) {
+        accountService.resendAccountCreatedNotification(id);
+
+        return ResponseEntity.accepted().body(
+                StandardResponse.success("Account creation notification email has been sent. Please check the inbox for login credentials.")
+        );
+    }
+
     @Operation(summary = "Get account by ID",
             description = "Get account details by ID"
     )

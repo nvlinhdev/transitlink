@@ -1,9 +1,9 @@
 package vn.edu.fpt.transitlink.trip.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.*;
 import lombok.*;
 import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
+import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -12,22 +12,21 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @Setter
-@Builder
-@ToString
 @EqualsAndHashCode(callSuper = true)
 @Entity
+@Table(name = "passenger_journeys")
 public class PassengerJourney extends BaseSoftDeletableEntity {
-    @jakarta.persistence.Id
+    @Id
     @GeneratedValue
-    private UUID Id;
+    private UUID id;
     private UUID passengerId;
-    private UUID pickupPlace;
-    private UUID dropoffPlace;
+    private UUID pickupPlaceId;
+    private UUID dropoffPlaceId;
     private UUID routeId;
-    private OffsetDateTime lastestStopArrivalTime;
+    private OffsetDateTime lastestStopArrivalTime; // thời gian mà xe chính sẽ đến điểm dừng cố định
     private OffsetDateTime actualPickupTime;
     private OffsetDateTime actualDropoffTime;
-    private int seatCount;
-    private String status;
-
+    private Integer seatCount;
+    @Enumerated(EnumType.STRING)
+    private JourneyStatus status;
 }

@@ -10,6 +10,7 @@ import vn.edu.fpt.transitlink.identity.entity.Passenger;
 import vn.edu.fpt.transitlink.shared.base.SoftDeletableRepository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,4 +39,8 @@ public interface PassengerRepository extends SoftDeletableRepository<Passenger, 
     // Find passenger by ID including deleted ones
     @Query("SELECT p FROM Passenger p WHERE p.id = :id")
     Optional<Passenger> findByIdIncludingDeleted(@Param("id") UUID id);
+
+    // Bulk check passengers by account IDs for import operations
+    @Query("SELECT p FROM Passenger p WHERE p.accountId IN :accountIds AND p.isDeleted = false")
+    List<Passenger> findByAccountIdsIn(@Param("accountIds") List<UUID> accountIds);
 }
