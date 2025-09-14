@@ -9,17 +9,20 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import vn.edu.fpt.transitlink.identity.dto.ImportPassengerResultDTO;
 import vn.edu.fpt.transitlink.identity.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.identity.enumeration.RoleName;
 import vn.edu.fpt.transitlink.identity.request.ImportAccountRequest;
 import vn.edu.fpt.transitlink.identity.request.ImportPassengerRequest;
 import vn.edu.fpt.transitlink.identity.service.PassengerService;
+import vn.edu.fpt.transitlink.location.dto.ImportPlaceResultDTO;
 import vn.edu.fpt.transitlink.location.dto.PlaceDTO;
 import vn.edu.fpt.transitlink.location.request.ImportPlaceRequest;
 import vn.edu.fpt.transitlink.location.service.PlaceService;
+import vn.edu.fpt.transitlink.shared.dto.ImportErrorDTO;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 import vn.edu.fpt.transitlink.shared.util.ExcelFileUtils;
-import vn.edu.fpt.transitlink.trip.dto.ImportResultDTO;
+import vn.edu.fpt.transitlink.trip.dto.ImportJourneyResultDTO;
 import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
 import vn.edu.fpt.transitlink.trip.entity.PassengerJourney;
 import vn.edu.fpt.transitlink.trip.entity.PassengerJourneyDocument;
@@ -363,13 +366,7 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
 
     @Override
     @Transactional
-    public ImportResultDTO importPassengerJourneysFromExcel(MultipartFile file) {
-        List<ImportResultDTO.ImportErrorDTO> errors = new ArrayList<>();
-        List<PassengerJourneyDTO> successfulJourneys = new ArrayList<>();
-        int totalRows = 0;
-        int successfulImports = 0;
-        int failedImports = 0;
-
+    public ImportJourneyResultDTO importPassengerJourneysFromExcel(MultipartFile file, ImportPassengerJourneyRequest request) {
         try {
             // Save uploaded file temporarily
             File tempFile = File.createTempFile("passenger_journeys_import", ".xlsx");
@@ -377,103 +374,318 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
 
             // Read Excel file
             List<Map<String, Object>> rows = ExcelFileUtils.readExcelAsMap(tempFile.getAbsolutePath());
+            int totalRows = rows.size();
 
-            List<ImportPassengerRequest> passengerInfos = extractPassengerInfos(rows);
-            List<PassengerDTO> importedPassengers =passengerService.importPassengers(passengerInfos);
-            List<ImportPlaceRequest> pickupPlaces = extractPickupPlaces(rows);
-            List<PlaceDTO> importedPickupPlaces = placeService.importPlaces(pickupPlaces);
-            List<ImportPlaceRequest> dropoffPlaces = extractDropoffPlaces(rows);
-            List<PlaceDTO> importedDropoffPlaces = placeService.importPlaces(dropoffPlaces);
+            if (totalRows == 0) {
+                return new ImportJourneyResultDTO(0, 0, 0, List.of());
+            }
 
-            List<PassengerJourney> entities = buildBulkInsertEntity(
-                    importedPassengers, importedPickupPlaces, importedDropoffPlaces, rows
+            // Step 1: Import all components
+            List<ImportPassengerRequest> passengerInfos = extractPassengerInfos(rows, request);
+            ImportPassengerResultDTO passengerResult = passengerService.importPassengers(passengerInfos);
+
+            List<ImportPlaceRequest> pickupPlaces = extractPickupPlaces(rows, request);
+            ImportPlaceResultDTO pickupResult = placeService.importPlaces(pickupPlaces);
+
+            List<ImportPlaceRequest> dropoffPlaces = extractDropoffPlaces(rows, request);
+            ImportPlaceResultDTO dropoffResult = placeService.importPlaces(dropoffPlaces);
+
+            // Step 2: Aggregate failed row indices
+            Set<Integer> failedRowIndices = aggregateFailedRows(
+                    passengerResult.errors(),
+                    pickupResult.errors(),
+                    dropoffResult.errors()
             );
-            passengerJourneyRepository.saveAll(entities);
 
-            // Clean up temporary file
+            // Step 3: Build journeys for successful rows
+            List<PassengerJourney> journeysToSave = buildJourneysForSuccessfulRows(
+                    rows, request, passengerResult.passengers(),
+                    pickupResult.places(), dropoffResult.places(), failedRowIndices
+            );
+
+            // Step 4: Save journeys with error handling
+            List<ImportErrorDTO> journeyErrors = new ArrayList<>();
+            List<PassengerJourney> savedJourneys = saveJourneysWithErrorHandling(
+                    journeysToSave, journeyErrors, failedRowIndices
+            );
+
+            // Clean up
             tempFile.delete();
+
+            // Step 5: Build final result
+            return buildFinalResult(totalRows, passengerResult, pickupResult,
+                    dropoffResult, savedJourneys, journeyErrors);
 
         } catch (Exception e) {
             log.error("Failed to import passenger journeys from Excel", e);
             throw new BusinessException(TripErrorCode.EXCEL_IMPORT_FAILED, e.getMessage());
         }
-
-        return new ImportResultDTO(totalRows, successfulImports, failedImports, successfulJourneys, errors);
     }
 
-    private List<ImportPassengerRequest> extractPassengerInfos(List<Map<String, Object>> rows) {
-        List<ImportPassengerRequest> passengerInfos = new ArrayList<>();
+    private Set<Integer> aggregateFailedRows(
+            List<ImportErrorDTO> passengerErrors,
+            List<ImportErrorDTO> pickupErrors,
+            List<ImportErrorDTO> dropoffErrors) {
 
-        rows.stream().forEach(row -> {
-            String email = row.get("Email").toString();
-            String firstName = row.get("First Name").toString();
-            String lastName = row.get("Last Name").toString();
-            String phoneNumber = row.get("Phone Number").toString();
-            String zaloPhoneNumber = row.get("Zalo Phone Number").toString();
+        Set<Integer> failedRows = new HashSet<>();
 
-            ImportAccountRequest importAccountRequest = new ImportAccountRequest(
-                    email, firstName, lastName, null, null, phoneNumber, zaloPhoneNumber, Set.of(RoleName.PASSENGER)
-            );
+        passengerErrors.forEach(error -> failedRows.add(error.row()));
+        pickupErrors.forEach(error -> failedRows.add(error.row()));
+        dropoffErrors.forEach(error -> failedRows.add(error.row()));
 
-            passengerInfos.add(new ImportPassengerRequest(importAccountRequest, 0, 0));
-        });
-
-        return passengerInfos;
+        log.debug("Failed rows: {}", failedRows);
+        return failedRows;
     }
 
-    private List<ImportPlaceRequest> extractPickupPlaces(List<Map<String, Object>> rows) {
-        List<ImportPlaceRequest> pickupPlaces = new ArrayList<>();
-        rows.stream().forEach(row -> {
-            String placeName = row.get("Pickup Place Name").toString();
-            Double latitude = Double.parseDouble(row.get("Pickup Latitude").toString());
-            Double longitude = Double.parseDouble(row.get("Pickup Longitude").toString());
-            String address = row.get("Pickup Address").toString();
-            pickupPlaces.add(new ImportPlaceRequest(placeName, latitude, longitude, address));
-        });
-        return pickupPlaces;
-    }
+    private List<PassengerJourney> buildJourneysForSuccessfulRows(
+            List<Map<String, Object>> rows,
+            ImportPassengerJourneyRequest request,
+            List<PassengerDTO> importedPassengers,
+            List<PlaceDTO> importedPickupPlaces,
+            List<PlaceDTO> importedDropoffPlaces,
+            Set<Integer> failedRowIndices) {
 
-    private List<ImportPlaceRequest> extractDropoffPlaces(List<Map<String, Object>> rows) {
-        List<ImportPlaceRequest> dropoffPlaces = new ArrayList<>();
-        rows.stream().forEach(row -> {
-            String placeName = row.get("Dropoff Place Name").toString();
-            Double latitude = Double.parseDouble(row.get("Dropoff Latitude").toString());
-            Double longitude = Double.parseDouble(row.get("Dropoff Longitude").toString());
-            String address = row.get("Dropoff Address").toString();
-            dropoffPlaces.add(new ImportPlaceRequest(placeName, latitude, longitude, address));
-        });
-        return dropoffPlaces;
-    }
-
-    private List<PassengerJourney> buildBulkInsertEntity(List<PassengerDTO> importedPassengers,
-                                                                           List<PlaceDTO> importedPickupPlaces,
-                                                                           List<PlaceDTO> importedDropoffPlaces,
-                                                                           List<Map<String, Object>> rows) {
         List<PassengerJourney> entities = new ArrayList<>();
+        int successfulIndex = 0; // Index in successful result lists
 
-        int totalRows = rows.size();
-        for (int i = 0; i < totalRows; i++) {
-            Map<String, Object> row = rows.get(i);
-            PassengerDTO passenger = importedPassengers.get(i);
-            PlaceDTO pickupPlace = importedPickupPlaces.get(i);
-            PlaceDTO dropoffPlace = importedDropoffPlaces.get(i);
-            OffsetDateTime arrivalTime = OffsetDateTime.parse(row.get("Latest Stop Arrival Time").toString());
-            Integer seatCount = Integer.parseInt(row.get("Seat Count").toString());
+        for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
+            // Skip failed rows
+            if (failedRowIndices.contains(rowIndex)) {
+                log.debug("Skipping failed row: {}", rowIndex);
+                continue;
+            }
 
-            PassengerJourney journey = new PassengerJourney();
-            journey.setPassengerId(passenger.id());
-            journey.setPickupPlaceId(pickupPlace.id());
-            journey.setDropoffPlaceId(dropoffPlace.id());
-            journey.setLastestStopArrivalTime(arrivalTime);
-            journey.setSeatCount(seatCount);
-            journey.setStatus(JourneyStatus.NOT_SCHEDULED);
+            try {
+                Map<String, Object> row = rows.get(rowIndex);
 
-            entities.add(journey);
+                // Simple mapping: use successfulIndex to get data from successful lists
+                if (successfulIndex < importedPassengers.size() &&
+                        successfulIndex < importedPickupPlaces.size() &&
+                        successfulIndex < importedDropoffPlaces.size()) {
 
+                    PassengerDTO passenger = importedPassengers.get(successfulIndex);
+                    PlaceDTO pickupPlace = importedPickupPlaces.get(successfulIndex);
+                    PlaceDTO dropoffPlace = importedDropoffPlaces.get(successfulIndex);
+
+                    // Parse journey-specific data from row
+                    OffsetDateTime arrivalTime = parseArrivalTime(row, request);
+                    Integer seatCount = parseSeatCount(row, request);
+
+                    if (arrivalTime != null && seatCount != null) {
+                        PassengerJourney journey = new PassengerJourney();
+                        journey.setPassengerId(passenger.id());
+                        journey.setPickupPlaceId(pickupPlace.id());
+                        journey.setDropoffPlaceId(dropoffPlace.id());
+                        journey.setLastestStopArrivalTime(arrivalTime);
+                        journey.setSeatCount(seatCount);
+                        journey.setStatus(JourneyStatus.NOT_SCHEDULED);
+
+                        entities.add(journey);
+                        successfulIndex++;
+                    } else {
+                        log.warn("Invalid journey data at row {}: arrivalTime={}, seatCount={}",
+                                rowIndex, arrivalTime, seatCount);
+                    }
+                } else {
+                    log.warn("Insufficient successful data for row {}: passengers={}, pickups={}, dropoffs={}",
+                            rowIndex, importedPassengers.size(), importedPickupPlaces.size(), importedDropoffPlaces.size());
+                }
+
+            } catch (Exception ex) {
+                log.warn("Failed to build journey for row {}: {}", rowIndex, ex.getMessage());
+                // This will be handled as journey error
+            }
         }
+
+        log.info("Built {} journeys from {} successful rows", entities.size(),
+                rows.size() - failedRowIndices.size());
         return entities;
     }
 
+    private OffsetDateTime parseArrivalTime(Map<String, Object> row, ImportPassengerJourneyRequest request) {
+        try {
+            String timeStr = getValueIfHeaderExists(row, request.latestStopArrivalTime());
+            return timeStr != null ? OffsetDateTime.parse(timeStr) : null;
+        } catch (Exception ex) {
+            log.warn("Failed to parse arrival time: {}", ex.getMessage());
+            return null;
+        }
+    }
+
+    private Integer parseSeatCount(Map<String, Object> row, ImportPassengerJourneyRequest request) {
+        try {
+            String seatStr = getValueIfHeaderExists(row, request.seatCount());
+            return seatStr != null ? (int) Double.parseDouble(seatStr) : null;
+        } catch (Exception ex) {
+            log.warn("Failed to parse seat count: {}", ex.getMessage());
+            return null;
+        }
+    }
+
+    private List<PassengerJourney> saveJourneysWithErrorHandling(
+            List<PassengerJourney> journeys,
+            List<ImportErrorDTO> journeyErrors,
+            Set<Integer> failedRowIndices) {
+
+        if (journeys.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        try {
+            // Bulk save
+            List<PassengerJourney> savedJourneys = passengerJourneyRepository.saveAll(journeys);
+            // Index all to Elasticsearch
+            for (PassengerJourney saved : savedJourneys) {
+                indexToElasticsearch(saved,
+                        passengerService.getPassengerById(saved.getPassengerId()),
+                        placeService.getPlace(saved.getPickupPlaceId()),
+                        placeService.getPlace(saved.getDropoffPlaceId()));
+            }
+            log.info("Successfully saved {} journeys in bulk", savedJourneys.size());
+            return savedJourneys;
+
+        } catch (Exception ex) {
+            log.warn("Bulk save failed, falling back to individual saves: {}", ex.getMessage());
+
+            // Fallback: individual saves
+            List<PassengerJourney> savedJourneys = new ArrayList<>();
+
+            for (int i = 0; i < journeys.size(); i++) {
+                PassengerJourney journey = journeys.get(i);
+                try {
+                    PassengerJourney saved = passengerJourneyRepository.save(journey);
+                    savedJourneys.add(saved);
+                    indexToElasticsearch(saved,
+                            passengerService.getPassengerById(saved.getPassengerId()),
+                            placeService.getPlace(saved.getPickupPlaceId()),
+                            placeService.getPlace(saved.getDropoffPlaceId()));
+                } catch (Exception innerEx) {
+                    // Find original row index để report error chính xác
+                    int originalRowIndex = findOriginalRowIndex(i, failedRowIndices);
+                    journeyErrors.add(new ImportErrorDTO(originalRowIndex,
+                            "Failed to save journey: " + innerEx.getMessage()));
+                }
+            }
+
+            log.info("Saved {} journeys individually, {} failed",
+                    savedJourneys.size(), journeyErrors.size());
+            return savedJourneys;
+        }
+    }
+
+    private int findOriginalRowIndex(int successfulJourneyIndex, Set<Integer> failedRowIndices) {
+        // Calculate original row index by accounting for failed rows before this journey
+        int originalIndex = successfulJourneyIndex;
+
+        for (Integer failedIndex : failedRowIndices) {
+            if (failedIndex <= originalIndex) {
+                originalIndex++;
+            }
+        }
+
+        return originalIndex;
+    }
+
+    private ImportJourneyResultDTO buildFinalResult(
+            int totalRows,
+            ImportPassengerResultDTO passengerResult,
+            ImportPlaceResultDTO pickupResult,
+            ImportPlaceResultDTO dropoffResult,
+            List<PassengerJourney> savedJourneys,
+            List<ImportErrorDTO> journeyErrors) {
+
+        // Aggregate all errors
+        journeyErrors.addAll(passengerResult.errors());
+        journeyErrors.addAll(pickupResult.errors());
+        journeyErrors.addAll(dropoffResult.errors());
+
+        // Remove duplicate errors based on row number & merge messages & sort by row
+        Map<Integer, String> errorMap = new HashMap<>();
+        for (ImportErrorDTO error : journeyErrors) {
+            errorMap.merge(error.row(), error.message(), (oldMsg, newMsg) -> oldMsg + "; " + newMsg);
+        }
+        List<ImportErrorDTO> uniqueSortedErrors = errorMap.entrySet().stream()
+                .map(entry -> new ImportErrorDTO(entry.getKey(), entry.getValue()))
+                .sorted(Comparator.comparingInt(ImportErrorDTO::row))
+                .toList();
+
+        return new ImportJourneyResultDTO(
+                totalRows,
+                savedJourneys.size(),
+                totalRows - savedJourneys.size(),
+                uniqueSortedErrors
+        );
+    }
+
+    // Updated extract methods với better error handling
+    private List<ImportPassengerRequest> extractPassengerInfos(List<Map<String, Object>> rows, ImportPassengerJourneyRequest request) {
+        return rows.stream().map(row -> {
+            try {
+                String email = getValueIfHeaderExists(row, request.email());
+                String firstName = getValueIfHeaderExists(row, request.firstName());
+                String lastName = getValueIfHeaderExists(row, request.lastName());
+                String phoneNumber = getValueIfHeaderExists(row, request.phoneNumber());
+                String zaloPhoneNumber = getValueIfHeaderExists(row, request.zaloPhoneNumber());
+
+                ImportAccountRequest importAccountRequest = new ImportAccountRequest(
+                        email, firstName, lastName, null, null, phoneNumber, zaloPhoneNumber, Set.of(RoleName.PASSENGER)
+                );
+
+                return new ImportPassengerRequest(importAccountRequest, 0, 0);
+            } catch (Exception ex) {
+                log.warn("Failed to extract passenger info from row: {}", ex.getMessage());
+                return null;
+            }
+        }).filter(Objects::nonNull).toList();
+    }
+
+    private List<ImportPlaceRequest> extractPickupPlaces(List<Map<String, Object>> rows, ImportPassengerJourneyRequest request) {
+        return rows.stream().map(row -> {
+            try {
+                String placeName = getValueIfHeaderExists(row, request.pickupPlaceName());
+                String latStr = getValueIfHeaderExists(row, request.pickupLatitude());
+                String lonStr = getValueIfHeaderExists(row, request.pickupLongitude());
+                String address = getValueIfHeaderExists(row, request.pickupAddress());
+
+                if (latStr != null && lonStr != null) {
+                    Double latitude = Double.parseDouble(latStr);
+                    Double longitude = Double.parseDouble(lonStr);
+                    return new ImportPlaceRequest(placeName, latitude, longitude, address);
+                }
+                return null;
+            } catch (Exception ex) {
+                log.warn("Failed to extract pickup place from row: {}", ex.getMessage());
+                return null;
+            }
+        }).filter(Objects::nonNull).toList();
+    }
+
+    private List<ImportPlaceRequest> extractDropoffPlaces(List<Map<String, Object>> rows, ImportPassengerJourneyRequest request) {
+        return rows.stream().map(row -> {
+            try {
+                String placeName = getValueIfHeaderExists(row, request.dropoffPlaceName());
+                String latStr = getValueIfHeaderExists(row, request.dropoffLatitude());
+                String lonStr = getValueIfHeaderExists(row, request.dropoffLongitude());
+                String address = getValueIfHeaderExists(row, request.dropoffAddress());
+
+                if (latStr != null && lonStr != null) {
+                    Double latitude = Double.parseDouble(latStr);
+                    Double longitude = Double.parseDouble(lonStr);
+                    return new ImportPlaceRequest(placeName, latitude, longitude, address);
+                }
+                return null;
+            } catch (Exception ex) {
+                log.warn("Failed to extract dropoff place from row: {}", ex.getMessage());
+                return null;
+            }
+        }).filter(Objects::nonNull).toList();
+    }
+
+    private String getValueIfHeaderExists(Map<String, Object> row, String header) {
+        if (header == null || header.isBlank()) return null; // header không có → bỏ qua
+        Object value = row.get(header);
+        return value != null ? value.toString() : null;
+    }
 
     @Override
     @Transactional

@@ -23,7 +23,6 @@ public interface AccountMapper {
     Set<RoleName> map(Set<Role> roles);
 
     // Mapping for ImportAccountRequest to Account
-    @Mapping(target = "id", expression = "java(java.util.UUID.randomUUID())")
     @Mapping(target = "password", ignore = true) // Will be set manually with encoded password
     @Mapping(target = "emailVerified", constant = "true")
     @Mapping(target = "roles", ignore = true) // Will be set manually after role conversion

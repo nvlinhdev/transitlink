@@ -1,6 +1,9 @@
 package vn.edu.fpt.transitlink.trip.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Encoding;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -13,15 +16,17 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.edu.fpt.transitlink.shared.dto.PaginatedResponse;
 import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
-import vn.edu.fpt.transitlink.trip.dto.ImportResultDTO;
+import vn.edu.fpt.transitlink.trip.dto.ImportJourneyResultDTO;
 import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
 import vn.edu.fpt.transitlink.trip.request.CreatePassengerJourneyRequest;
+import vn.edu.fpt.transitlink.trip.request.ImportPassengerJourneyRequest;
 import vn.edu.fpt.transitlink.trip.request.SearchPassengerJourneyRequest;
 import vn.edu.fpt.transitlink.trip.request.UpdatePassengerJourneyRequest;
 import vn.edu.fpt.transitlink.trip.service.PassengerJourneyService;
 
 import jakarta.validation.Valid;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -36,7 +41,7 @@ public class PassengerJourneyController {
     // ==================== CRUD OPERATIONS ====================
 
     @Operation(summary = "Create new passenger journey",
-               description = "Create a new passenger journey request (TICKET_SELLER only)")
+            description = "Create a new passenger journey request (TICKET_SELLER only)")
     @PostMapping
     @PreAuthorize("hasRole('TICKET_SELLER')")
     public ResponseEntity<StandardResponse<PassengerJourneyDTO>> createPassengerJourney(
@@ -46,7 +51,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get passenger journey by ID",
-               description = "Get passenger journey details by ID")
+            description = "Get passenger journey details by ID")
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('PASSENGER', 'TICKET_SELLER', 'DISPATCHER')")
     public ResponseEntity<StandardResponse<PassengerJourneyDTO>> getPassengerJourneyById(@PathVariable UUID id) {
@@ -55,7 +60,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Update passenger journey",
-               description = "Update passenger journey details (TICKET_SELLER only)")
+            description = "Update passenger journey details (TICKET_SELLER only)")
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('TICKET_SELLER')")
     public ResponseEntity<StandardResponse<PassengerJourneyDTO>> updatePassengerJourney(
@@ -66,7 +71,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Delete passenger journey",
-               description = "Soft delete passenger journey (TICKET_SELLER only)")
+            description = "Soft delete passenger journey (TICKET_SELLER only)")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('TICKET_SELLER')")
     public ResponseEntity<StandardResponse<PassengerJourneyDTO>> deletePassengerJourney(
@@ -77,7 +82,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Restore passenger journey",
-               description = "Restore soft-deleted passenger journey (TICKET_SELLER only)")
+            description = "Restore soft-deleted passenger journey (TICKET_SELLER only)")
     @PostMapping("/{id}/restore")
     @PreAuthorize("hasRole('TICKET_SELLER')")
     public ResponseEntity<StandardResponse<PassengerJourneyDTO>> restorePassengerJourney(@PathVariable UUID id) {
@@ -88,7 +93,7 @@ public class PassengerJourneyController {
     // ==================== LIST OPERATIONS (TICKET_SELLER) ====================
 
     @Operation(summary = "Get all passenger journeys (paginated)",
-               description = "Get paginated list of all passenger journeys (TICKET_SELLER only)")
+            description = "Get paginated list of all passenger journeys (TICKET_SELLER only)")
     @GetMapping
     @PreAuthorize("hasRole('TICKET_SELLER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getPassengerJourneys(
@@ -101,7 +106,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get deleted passenger journeys (paginated)",
-               description = "Get paginated list of soft-deleted passenger journeys (TICKET_SELLER only)")
+            description = "Get paginated list of soft-deleted passenger journeys (TICKET_SELLER only)")
     @GetMapping("/deleted")
     @PreAuthorize("hasRole('TICKET_SELLER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getDeletedPassengerJourneys(
@@ -114,7 +119,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get unscheduled journeys",
-               description = "Get journeys that haven't been scheduled yet (TICKET_SELLER only)")
+            description = "Get journeys that haven't been scheduled yet (TICKET_SELLER only)")
     @GetMapping("/unscheduled")
     @PreAuthorize("hasRole('TICKET_SELLER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getUnscheduledJourneys(
@@ -127,7 +132,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get journeys by status",
-               description = "Get journeys filtered by status (TICKET_SELLER and DISPATCHER)")
+            description = "Get journeys filtered by status (TICKET_SELLER and DISPATCHER)")
     @GetMapping("/status/{status}")
     @PreAuthorize("hasAnyRole('TICKET_SELLER', 'DISPATCHER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getJourneysByStatus(
@@ -143,7 +148,7 @@ public class PassengerJourneyController {
     // ==================== DISPATCHER OPERATIONS ====================
 
     @Operation(summary = "Get journeys for today",
-               description = "Get all journeys scheduled for today (DISPATCHER only)")
+            description = "Get all journeys scheduled for today (DISPATCHER only)")
     @GetMapping("/today")
     @PreAuthorize("hasRole('DISPATCHER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getJourneysForToday(
@@ -155,7 +160,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get journeys for a specific week",
-               description = "Get all journeys for a specific week (DISPATCHER only)")
+            description = "Get all journeys for a specific week (DISPATCHER only)")
     @GetMapping("/week")
     @PreAuthorize("hasRole('DISPATCHER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getJourneysForWeek(
@@ -168,7 +173,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get journeys for a specific month",
-               description = "Get all journeys for a specific month (DISPATCHER only)")
+            description = "Get all journeys for a specific month (DISPATCHER only)")
     @GetMapping("/month")
     @PreAuthorize("hasRole('DISPATCHER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getJourneysForMonth(
@@ -182,7 +187,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get journeys by date range",
-               description = "Get journeys within a specific date range (DISPATCHER only)")
+            description = "Get journeys within a specific date range (DISPATCHER only)")
     @GetMapping("/date-range")
     @PreAuthorize("hasRole('DISPATCHER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getJourneysByDateRange(
@@ -198,7 +203,7 @@ public class PassengerJourneyController {
     // ==================== PASSENGER OPERATIONS ====================
 
     @Operation(summary = "Get current user's journeys",
-               description = "Get current passenger's active journeys (PASSENGER only)")
+            description = "Get current passenger's active journeys (PASSENGER only)")
     @GetMapping("/me")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getCurrentPassengerJourneys(
@@ -212,7 +217,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get current user's completed journeys",
-               description = "Get current passenger's completed journeys (PASSENGER only)")
+            description = "Get current passenger's completed journeys (PASSENGER only)")
     @GetMapping("/me/completed")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getMyCompletedJourneys(
@@ -225,7 +230,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get current user's cancelled journeys",
-               description = "Get current passenger's cancelled journeys (PASSENGER only)")
+            description = "Get current passenger's cancelled journeys (PASSENGER only)")
     @GetMapping("/me/cancelled")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getMyCancelledJourneys(
@@ -238,7 +243,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Get current user's journey history",
-               description = "Get current passenger's complete journey history (PASSENGER only)")
+            description = "Get current passenger's complete journey history (PASSENGER only)")
     @GetMapping("/me/history")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getMyJourneyHistory(
@@ -253,7 +258,7 @@ public class PassengerJourneyController {
     // ==================== SEARCH OPERATIONS ====================
 
     @Operation(summary = "Search passenger journeys",
-               description = "Advanced search for passenger journeys (TICKET_SELLER and DISPATCHER only)")
+            description = "Advanced search for passenger journeys (TICKET_SELLER and DISPATCHER only)")
     @PostMapping("/search")
     @PreAuthorize("hasAnyRole('TICKET_SELLER', 'DISPATCHER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> searchPassengerJourneys(
@@ -266,7 +271,7 @@ public class PassengerJourneyController {
     }
 
     @Operation(summary = "Search by passenger name or email",
-               description = "Search journeys by passenger name or email (TICKET_SELLER and DISPATCHER only)")
+            description = "Search journeys by passenger name or email (TICKET_SELLER and DISPATCHER only)")
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('TICKET_SELLER', 'DISPATCHER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> searchByPassengerNameOrEmail(
@@ -281,12 +286,22 @@ public class PassengerJourneyController {
     // ==================== BULK OPERATIONS ====================
 
     @Operation(summary = "Import passenger journeys from Excel file",
-               description = "Bulk import passenger journeys from Excel file (TICKET_SELLER only)")
-    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+            description = "Bulk import passenger journeys from Excel file (TICKET_SELLER only)")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            content = @Content(
+                    encoding = @Encoding(name = "request", contentType = MediaType.APPLICATION_JSON_VALUE)
+            )
+    )
+    @PostMapping(value = "/import", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     @PreAuthorize("hasRole('TICKET_SELLER')")
-    public ResponseEntity<StandardResponse<ImportResultDTO>> importPassengerJourneysFromExcel(
-            @RequestParam("file") MultipartFile file) {
-        ImportResultDTO result = passengerJourneyService.importPassengerJourneysFromExcel(file);
+    public ResponseEntity<StandardResponse<ImportJourneyResultDTO>> importPassengerJourneysFromExcel(
+            @Parameter(description = "Mapping configuration (JSON)")
+            @RequestPart("request") ImportPassengerJourneyRequest request,
+
+            @Parameter(description = "Excel file to import")
+            @RequestPart("file") MultipartFile file
+    ) {
+        ImportJourneyResultDTO result = passengerJourneyService.importPassengerJourneysFromExcel(file, request);
         return ResponseEntity.ok(StandardResponse.success(result));
     }
 

@@ -1,10 +1,11 @@
 package vn.edu.fpt.transitlink.trip.service;
 
 import org.springframework.web.multipart.MultipartFile;
-import vn.edu.fpt.transitlink.trip.dto.ImportResultDTO;
+import vn.edu.fpt.transitlink.trip.dto.ImportJourneyResultDTO;
 import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
 import vn.edu.fpt.transitlink.trip.request.CreatePassengerJourneyRequest;
+import vn.edu.fpt.transitlink.trip.request.ImportPassengerJourneyRequest;
 import vn.edu.fpt.transitlink.trip.request.SearchPassengerJourneyRequest;
 import vn.edu.fpt.transitlink.trip.request.UpdatePassengerJourneyRequest;
 
@@ -48,7 +49,7 @@ public interface PassengerJourneyService {
     List<PassengerJourneyDTO> searchByPassengerNameOrEmail(String query, int page, int size);
 
     // Bulk operations
-    ImportResultDTO importPassengerJourneysFromExcel(MultipartFile file);
+    ImportJourneyResultDTO importPassengerJourneysFromExcel(MultipartFile file, ImportPassengerJourneyRequest request);
 
     // Route service integration methods
     PassengerJourneyDTO assignRoute(UUID journeyId, UUID routeId);

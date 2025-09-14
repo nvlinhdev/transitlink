@@ -28,6 +28,8 @@ public class DataInitializer {
     public void initializeData() {
         initializeRoles();
         initializeManager();
+        initializeTicketSeller();
+        initializeDispatcher();
     }
 
     private void initializeRoles() {
@@ -82,7 +84,6 @@ public class DataInitializer {
             manager.setPassword(passwordEncoder.encode("manager123"));
             manager.setFirstName("Manager");
             manager.setLastName("User");
-            manager.setPhoneNumber("1234567890");
             manager.setEmailVerified(true);
             manager.setProfileCompleted(true);
 
@@ -96,6 +97,58 @@ public class DataInitializer {
 
             accountRepository.save(manager);
             System.out.println("Manager user created: manager@example.com / manager123");
+        }
+    }
+
+    private void initializeTicketSeller() {
+        // Kiểm tra xem đã có người dùng nào với role TICKET_SELLER chưa
+        if (accountRepository.existsByRoleName(RoleName.TICKET_SELLER)) {
+            System.out.println("Ticket Seller users already exist. Skipping ticket seller initialization.");
+            return;
+        }
+
+        if (!accountRepository.existsByEmail("ticketseller@example.com")) {
+            Account dispatcher = new Account();
+            dispatcher.setEmail("ticketseller@example.com");
+            dispatcher.setPassword(passwordEncoder.encode("ticketseller123"));
+            dispatcher.setFirstName("Ticket");
+            dispatcher.setLastName("Seller");
+            dispatcher.setEmailVerified(true);
+            dispatcher.setProfileCompleted(true);
+            // Khởi tạo roles để tránh NullPointerException
+            dispatcher.setRoles(new HashSet<>());
+            // Gán role TICKET_SELLER
+            Role ticketSellerRole = roleRepository.findByName(RoleName.TICKET_SELLER)
+                    .orElseThrow(() -> new RuntimeException("Ticket Seller role not found"));
+            dispatcher.getRoles().add(ticketSellerRole);
+            accountRepository.save(dispatcher);
+            System.out.println("Ticket Seller user created: ticketseller@example.com / ticketseller123");
+        }
+    }
+
+    private void initializeDispatcher() {
+        // Kiểm tra xem đã có người dùng nào với role DISPATCHER chưa
+        if (accountRepository.existsByRoleName(RoleName.DISPATCHER)) {
+            System.out.println("Dispatcher users already exist. Skipping dispatcher initialization.");
+            return;
+        }
+
+        if (!accountRepository.existsByEmail("dispatcher@example.com")) {
+            Account dispatcher = new Account();
+            dispatcher.setEmail("dispatcher@example.com");
+            dispatcher.setPassword(passwordEncoder.encode("dispatcher123"));
+            dispatcher.setFirstName("Dispatcher");
+            dispatcher.setLastName("User");
+            dispatcher.setEmailVerified(true);
+            dispatcher.setProfileCompleted(true);
+            // Khởi tạo roles để tránh NullPointerException
+            dispatcher.setRoles(new HashSet<>());
+            // Gán role DISPATCHER
+            Role dispatcherRole = roleRepository.findByName(RoleName.DISPATCHER)
+                    .orElseThrow(() -> new RuntimeException("Dispatcher role not found"));
+            dispatcher.getRoles().add(dispatcherRole);
+            accountRepository.save(dispatcher);
+            System.out.println("Dispatcher user created: dispatcher@example.com / dispatcher123");
         }
     }
 }

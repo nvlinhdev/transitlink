@@ -15,7 +15,6 @@ import java.util.UUID;
 @Table(name = "passengers")
 public class Passenger extends BaseSoftDeletableEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     private Integer totalCompletedTrips;
     private Integer totalCancelledTrips;

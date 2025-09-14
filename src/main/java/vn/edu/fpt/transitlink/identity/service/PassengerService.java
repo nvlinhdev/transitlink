@@ -1,5 +1,6 @@
 package vn.edu.fpt.transitlink.identity.service;
 
+import vn.edu.fpt.transitlink.identity.dto.ImportPassengerResultDTO;
 import vn.edu.fpt.transitlink.identity.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.identity.request.CreatePassengerRequest;
 import vn.edu.fpt.transitlink.identity.request.UpdatePassengerRequest;
@@ -31,5 +32,6 @@ public interface PassengerService {
     PassengerDTO incrementCancelledTrips(UUID passengerId);
 
     // Bulk operations
-    List<PassengerDTO> importPassengers(List<ImportPassengerRequest> requests);
+//    List<PassengerDTO> importPassengers(List<ImportPassengerRequest> requests);
+    ImportPassengerResultDTO importPassengers(List<ImportPassengerRequest> requests);
 }

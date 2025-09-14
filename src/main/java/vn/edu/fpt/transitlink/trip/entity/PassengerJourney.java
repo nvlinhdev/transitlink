@@ -14,7 +14,11 @@ import java.util.UUID;
 @Setter
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "passenger_journeys")
+@Table(name = "passenger_journeys",
+    uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"passengerId", "pickupPlaceId", "dropoffPlaceId", "lastestStopArrivalTime"})
+    }
+)
 public class PassengerJourney extends BaseSoftDeletableEntity {
     @Id
     @GeneratedValue

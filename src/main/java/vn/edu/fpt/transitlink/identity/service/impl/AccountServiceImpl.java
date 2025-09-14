@@ -1,12 +1,18 @@
 package vn.edu.fpt.transitlink.identity.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.edu.fpt.transitlink.identity.enumeration.RoleName;
 import vn.edu.fpt.transitlink.identity.enumeration.VerificationType;
 import vn.edu.fpt.transitlink.identity.enumeration.NotificationType;
@@ -26,6 +32,7 @@ import vn.edu.fpt.transitlink.identity.entity.Account;
 import vn.edu.fpt.transitlink.identity.entity.Role;
 import vn.edu.fpt.transitlink.identity.service.RoleService;
 import vn.edu.fpt.transitlink.identity.service.VerificationService;
+import vn.edu.fpt.transitlink.shared.dto.ImportErrorDTO;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 import vn.edu.fpt.transitlink.identity.enumeration.AuthErrorCode;
 import org.springframework.data.domain.PageRequest;
@@ -34,8 +41,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class AccountServiceImpl implements AccountService {
@@ -48,8 +57,8 @@ public class AccountServiceImpl implements AccountService {
     private final AccountNotificationService notificationService;
 
     @Caching(
-            put   = { @CachePut(value = "accountsById", key = "#result.id") },
-            evict = { @CacheEvict(value = "accountsPage", allEntries = true) }
+            put = {@CachePut(value = "accountsById", key = "#result.id")},
+            evict = {@CacheEvict(value = "accountsPage", allEntries = true)}
     )
     @Override
     public AccountDTO createAccount(CreateAccountRequest dto) {
@@ -69,9 +78,9 @@ public class AccountServiceImpl implements AccountService {
         account.setProfileCompleted(account.isProfileCompleted());
         if (dto.roles() != null) {
             Set<Role> roles = dto.roles().stream()
-                            .map(roleService::findByName)
-                            .map(roleMapper::toEntity)
-                            .collect(Collectors.toSet());
+                    .map(roleService::findByName)
+                    .map(roleMapper::toEntity)
+                    .collect(Collectors.toSet());
             account.setRoles(roles);
         }
 
@@ -87,20 +96,20 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public AccountDTO getAccountById(UUID id) {
         Account acc = accountRepository.findById(id)
-            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
         return accountMapper.toDTO(acc);
     }
 
     @Caching(
-            put   = { @CachePut(value = "accountsById", key = "#id") },
-            evict = { @CacheEvict(value = "accountsPage", allEntries = true) }
+            put = {@CachePut(value = "accountsById", key = "#id")},
+            evict = {@CacheEvict(value = "accountsPage", allEntries = true)}
     )
     @Override
     public AccountDTO updateAccount(UUID id, UpdateAccountRequest dto) {
         Account account = accountRepository.findById(id)
-            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
 
-        if(dto.email() != null && !dto.email().equalsIgnoreCase(account.getEmail())) {
+        if (dto.email() != null && !dto.email().equalsIgnoreCase(account.getEmail())) {
             // Kiểm tra email mới đã tồn tại chưa
             boolean emailExists = accountRepository.existsByEmail(dto.email());
             if (emailExists) {
@@ -109,15 +118,15 @@ public class AccountServiceImpl implements AccountService {
             account.setEmail(dto.email());
         }
 
-        if(dto.firstName() != null && !dto.firstName().equalsIgnoreCase(account.getFirstName())) {
+        if (dto.firstName() != null && !dto.firstName().equalsIgnoreCase(account.getFirstName())) {
             account.setFirstName(dto.firstName());
         }
 
-        if(dto.lastName() != null && !dto.lastName().equalsIgnoreCase(account.getLastName())) {
+        if (dto.lastName() != null && !dto.lastName().equalsIgnoreCase(account.getLastName())) {
             account.setLastName(dto.lastName());
         }
 
-        if(dto.gender() != null && !dto.gender().equals(account.getGender())) {
+        if (dto.gender() != null && !dto.gender().equals(account.getGender())) {
             account.setGender(dto.gender());
         }
 
@@ -125,11 +134,11 @@ public class AccountServiceImpl implements AccountService {
             account.setBirthDate(dto.birthDate());
         }
 
-        if(dto.phoneNumber() != null && !dto.phoneNumber().equalsIgnoreCase(account.getPhoneNumber())) {
+        if (dto.phoneNumber() != null && !dto.phoneNumber().equalsIgnoreCase(account.getPhoneNumber())) {
             account.setPhoneNumber(dto.phoneNumber());
         }
 
-        if(dto.zaloPhoneNumber() != null && !dto.zaloPhoneNumber().equalsIgnoreCase(account.getZaloPhoneNumber())) {
+        if (dto.zaloPhoneNumber() != null && !dto.zaloPhoneNumber().equalsIgnoreCase(account.getZaloPhoneNumber())) {
             account.setZaloPhoneNumber(dto.zaloPhoneNumber());
         }
 
@@ -169,7 +178,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Caching(
-            put   = { @CachePut(value = "accountsById", key = "#restoreId") },
+            put = {@CachePut(value = "accountsById", key = "#restoreId")},
             evict = {
                     @CacheEvict(value = "accountsPage", allEntries = true),
                     @CacheEvict(value = "deletedAccountsPage", allEntries = true)
@@ -190,7 +199,7 @@ public class AccountServiceImpl implements AccountService {
     @Cacheable(value = "accountsPage", key = "'page:' + #page + ':size:' + #size")
     @Override
     public List<AccountDTO> getAccounts(int page, int size) {
-        var paged = accountRepository.findAllExcludingRoles( Set.of(RoleName.PASSENGER, RoleName.MANAGER),PageRequest.of(page, size));
+        var paged = accountRepository.findAllExcludingRoles(Set.of(RoleName.PASSENGER, RoleName.MANAGER), PageRequest.of(page, size));
         return paged.stream().map(accountMapper::toDTO).toList();
     }
 
@@ -200,13 +209,13 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Caching(
-            put   = { @CachePut(value = "accountsById", key = "#userId") },
-            evict = { @CacheEvict(value = "accountsPage", allEntries = true) }
+            put = {@CachePut(value = "accountsById", key = "#userId")},
+            evict = {@CacheEvict(value = "accountsPage", allEntries = true)}
     )
     @Override
     public AccountDTO updateCurrentUserAccount(UUID userId, UpdateCurrentUserRequest dto) {
         Account account = accountRepository.findById(userId)
-            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
 
         // Cập nhật thông tin cá nhân của người dùng
         account.setFirstName(dto.firstName());
@@ -226,7 +235,7 @@ public class AccountServiceImpl implements AccountService {
     public CompletableFuture<Boolean> initiateEmailChange(UUID userId, InitiateEmailChangeRequest dto) {
         // First get the account to verify it exists
         Account account = accountRepository.findById(userId)
-            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
 
         // Check if the new email is different from the current one
         if (account.getEmail().equalsIgnoreCase(dto.newEmail())) {
@@ -250,13 +259,13 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Caching(
-            put   = { @CachePut(value = "accountsById", key = "#userId") },
-            evict = { @CacheEvict(value = "accountsPage", allEntries = true) }
+            put = {@CachePut(value = "accountsById", key = "#userId")},
+            evict = {@CacheEvict(value = "accountsPage", allEntries = true)}
     )
     @Override
     public AccountDTO updateCurrentUserEmail(UUID userId, VerifyEmailChangeRequest dto) {
         Account account = accountRepository.findById(userId)
-            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
 
         // Verify the OTP for the new email
         boolean isOtpValid = verificationService.verifyOtp(dto.newEmail(), dto.otp(), VerificationType.EMAIL_CHANGE);
@@ -312,7 +321,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public CompletableFuture<Boolean> resendAccountCreatedNotification(UUID accountId) {
         Account account = accountRepository.findById(accountId)
-            .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.ACCOUNT_NOT_FOUND));
 
         // Tạo mật khẩu tạm thời mới
         String newPassword = UUID.randomUUID().toString().substring(0, 8);
@@ -329,66 +338,107 @@ public class AccountServiceImpl implements AccountService {
         templateVariables.put("password", rawPassword);
 
         return notificationService.sendNotificationEmail(
-            account.getEmail(),
-            NotificationType.ACCOUNT_CREATED,
-            templateVariables
+                account.getEmail(),
+                NotificationType.ACCOUNT_CREATED,
+                templateVariables
         );
     }
 
     @Override
-    public List<AccountDTO> importAccounts(List<ImportAccountRequest> importRequests) {
+    @Transactional
+    public ImportAccountResultDTO importAccounts(List<ImportAccountRequest> importRequests) {
         if (importRequests.isEmpty()) {
-            return new ArrayList<>();
+            return new ImportAccountResultDTO(0, 0, List.of(), List.of());
         }
 
-        // Bulk check tất cả emails có tồn tại không
-        List<String> emails = importRequests.stream()
-                .map(ImportAccountRequest::email)
-                .toList();
-
-        List<Account> existingAccounts = accountRepository.findByEmailsIn(emails);
-
-        // Tạo map để lookup nhanh accounts có sẵn theo email
-        Map<String, Account> existingAccountMap = existingAccounts.stream()
-                .collect(Collectors.toMap(
-                        Account::getEmail,
-                        account -> account,
-                        (existing, replacement) -> existing // Keep existing if duplicate
-                ));
-
         List<AccountDTO> results = new ArrayList<>();
-        List<Account> newAccountsToSave = new ArrayList<>();
-        Map<String, String> accountPasswordMap = new HashMap<>(); // To store raw passwords
+        List<ImportErrorDTO> errors = new ArrayList<>();
+        Map<Integer, Account> newAccountsToSave = new LinkedHashMap<>();
+        Map<String, String> accountPasswordMap = new HashMap<>();
 
-        for (ImportAccountRequest importRequest : importRequests) {
-            Account existingAccount = existingAccountMap.get(importRequest.email());
+        try {
+            // Bulk check tất cả emails có tồn tại không
+            List<String> emails = importRequests.stream()
+                    .map(ImportAccountRequest::email)
+                    .toList();
 
-            if (existingAccount != null) {
-                // Nếu đã tồn tại, sử dụng account có sẵn
-                results.add(accountMapper.toDTO(existingAccount));
-            } else {
-                // Nếu chưa tồn tại, chuẩn bị để bulk insert
-                String rawPassword = UUID.randomUUID().toString().substring(0, 8);
-                Account newAccount = createNewAccountFromImport(importRequest, rawPassword);
-                newAccountsToSave.add(newAccount);
-                accountPasswordMap.put(newAccount.getEmail(), rawPassword);
-                results.add(accountMapper.toDTO(newAccount));
+            Map<String, Account> existingAccountMap = accountRepository.findByEmailsIn(emails)
+                    .stream()
+                    .collect(Collectors.toMap(Account::getEmail, account -> account));
+
+            for (int i = 0; i < importRequests.size(); i++) {
+                ImportAccountRequest importRequest = importRequests.get(i);
+                try {
+                    Account existingAccount = existingAccountMap.get(importRequest.email());
+
+                    if (existingAccount != null) {
+                        results.add(accountMapper.toDTO(existingAccount));
+                    } else {
+                        String rawPassword = UUID.randomUUID().toString().substring(0, 8);
+                        Account newAccount = createNewAccountFromImport(importRequest, rawPassword);
+                        newAccountsToSave.put(i, newAccount);
+                        accountPasswordMap.put(newAccount.getEmail(), rawPassword);
+                    }
+                } catch (Exception ex) {
+                    errors.add(new ImportErrorDTO(i, "Failed to process account: " + ex.getMessage()));
+                }
+            }
+        } catch (Exception ex) {
+            for (int i = 0; i < importRequests.size(); i++) {
+                errors.add(new ImportErrorDTO(i, "Batch lookup failed: " + ex.getMessage()));
+            }
+            return new ImportAccountResultDTO(0, importRequests.size(), List.of(), errors);
+        }
+
+        // Bulk insert accounts mới
+        if (!newAccountsToSave.isEmpty()) {
+            try {
+                List<Account> savedAccounts = accountRepository.saveAll(newAccountsToSave.values());
+
+                // Add to results
+                savedAccounts.forEach(account -> results.add(accountMapper.toDTO(account)));
+
+                // Send async notifications using existing method
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        savedAccounts.forEach(account -> {
+                            String rawPassword = accountPasswordMap.get(account.getEmail());
+                            sendAccountCreatedNotification(account, rawPassword);
+                        });
+                    }
+                });
+
+            } catch (Exception ex) {
+                // Fallback từng cái
+                for (Map.Entry<Integer, Account> entry : newAccountsToSave.entrySet()) {
+                    int idx = entry.getKey();
+                    Account newAccount = entry.getValue();
+                    try {
+                        Account saved = accountRepository.save(newAccount);
+                        results.add(accountMapper.toDTO(saved));
+
+                        String rawPassword = accountPasswordMap.get(saved.getEmail());
+                        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                sendAccountCreatedNotification(saved, rawPassword);
+                            }
+                        });
+
+
+                    } catch (Exception innerEx) {
+                        errors.add(new ImportErrorDTO(idx, "Failed to save account "
+                                + newAccount.getEmail() + ": " + innerEx.getMessage()));
+                    }
+                }
             }
         }
 
-        // Bulk insert các accounts mới
-        if (!newAccountsToSave.isEmpty()) {
-            List<Account> savedAccounts = accountRepository.saveAll(newAccountsToSave);
+        int successful = results.size();
+        int failed = importRequests.size() - successful;
 
-            savedAccounts.stream()
-                    .map(account -> {
-                        String rawPassword = accountPasswordMap.get(account.getEmail());
-                        return sendAccountCreatedNotification(account, rawPassword);
-                    })
-                    .toList();
-        }
-
-        return results;
+        return new ImportAccountResultDTO(successful, failed, results, errors);
     }
 
     private Account createNewAccountFromImport(ImportAccountRequest importRequest, String rawPassword) {

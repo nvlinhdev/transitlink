@@ -1,7 +1,12 @@
 package vn.edu.fpt.transitlink.location.service.impl;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import vn.edu.fpt.transitlink.location.dto.ImportPlaceResultDTO;
 import vn.edu.fpt.transitlink.location.dto.PlaceDTO;
 import vn.edu.fpt.transitlink.location.entity.Place;
 import vn.edu.fpt.transitlink.location.entity.PlaceDocument;
@@ -11,19 +16,18 @@ import vn.edu.fpt.transitlink.location.repository.PlaceRepository;
 import vn.edu.fpt.transitlink.location.request.ImportPlaceRequest;
 import vn.edu.fpt.transitlink.location.service.PlaceService;
 import vn.edu.fpt.transitlink.location.spi.PlaceSearchProvider;
+import vn.edu.fpt.transitlink.shared.dto.ImportErrorDTO;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class PlaceServiceImpl implements PlaceService {
     private final PlaceMapper mapper;
     private final PlaceRepository repository;
+    private final JdbcTemplate jdbcTemplate;
     private final PlaceSearchProvider searchProvider;
     private final PlaceESRepository placeESRepository;
 
@@ -42,57 +46,165 @@ public class PlaceServiceImpl implements PlaceService {
     }
 
     @Override
-    public List<PlaceDTO> importPlaces(List<ImportPlaceRequest> request) {
-        if (request.isEmpty()) {
-            return new ArrayList<>();
+    @Transactional
+    public ImportPlaceResultDTO importPlaces(List<ImportPlaceRequest> requests) {
+        if (requests.isEmpty()) {
+            return new ImportPlaceResultDTO(0, 0, List.of(), List.of());
         }
-
-        // Chuẩn bị danh sách tọa độ để bulk check
-        List<Object[]> coordinates = request.stream()
-                .map(req -> new Object[]{req.latitude(), req.longitude()})
-                .toList();
-
-        // Bulk check tất cả tọa độ có tồn tại không
-        List<Place> existingPlaces = repository.findByCoordinates(coordinates);
-
-        // Tạo map để lookup nhanh
-        Map<String, Place> existingPlaceMap = existingPlaces.stream()
-                .collect(Collectors.toMap(
-                        place -> place.getLatitude() + "," + place.getLongitude(),
-                        place -> place
-                ));
 
         List<PlaceDTO> results = new ArrayList<>();
-        List<Place> newPlacesToSave = new ArrayList<>();
+        List<ImportErrorDTO> errors = new ArrayList<>();
 
-        for (ImportPlaceRequest importRequest : request) {
-            String coordinateKey = importRequest.latitude() + "," + importRequest.longitude();
-            Place existingPlace = existingPlaceMap.get(coordinateKey);
+        try {
+            // Step 1: Bulk check existing places
+            Map<String, Place> existingPlaceMap = bulkCheckExistingPlaces(requests);
 
-            if (existingPlace != null) {
-                // Nếu đã tồn tại, sử dụng place có sẵn
-                results.add(mapper.toDTO(existingPlace));
-            } else {
-                // Nếu chưa tồn tại, chuẩn bị để bulk insert
-                Place newPlace = mapper.toEntity(importRequest);
-                newPlacesToSave.add(newPlace);
-                results.add(mapper.toDTO(newPlace));
+            // Step 2: Separate existing vs new places
+            List<Place> newPlacesToSave = new ArrayList<>();
+            Map<Place, Integer> placeToIndexMap = new HashMap<>();
+
+            for (int i = 0; i < requests.size(); i++) {
+                ImportPlaceRequest request = requests.get(i);
+                String coordinateKey = request.latitude() + "," + request.longitude();
+
+                try {
+                    Place existingPlace = existingPlaceMap.get(coordinateKey);
+
+                    if (existingPlace != null) {
+                        results.add(mapper.toDTO(existingPlace));
+                    } else {
+                        Place newPlace = mapper.toEntity(request);
+                        newPlacesToSave.add(newPlace);
+                        placeToIndexMap.put(newPlace, i);
+                    }
+                } catch (Exception ex) {
+                    errors.add(new ImportErrorDTO(i, "Failed to process place: " + ex.getMessage()));
+                }
             }
+
+            // Step 3: Save new places và index ES
+            if (!newPlacesToSave.isEmpty()) {
+                savePlacesWithESIndexing(newPlacesToSave, placeToIndexMap, results, errors);
+            }
+
+        } catch (Exception ex) {
+            for (int i = 0; i < requests.size(); i++) {
+                errors.add(new ImportErrorDTO(i, "Batch processing failed: " + ex.getMessage()));
+            }
+            return new ImportPlaceResultDTO(0, requests.size(), errors, List.of());
         }
 
-        // Bulk insert các place mới và bulk index vào Elasticsearch
-        if (!newPlacesToSave.isEmpty()) {
+        int successful = results.size();
+        int failed = requests.size() - successful;
+
+        return new ImportPlaceResultDTO(successful, failed, errors, results);
+    }
+
+    private Map<String, Place> bulkCheckExistingPlaces(List<ImportPlaceRequest> requests) {
+        if (requests.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<String> uniqueCoordinates = requests.stream()
+                .map(r -> r.latitude() + "," + r.longitude())
+                .distinct()
+                .toList();
+
+        if (uniqueCoordinates.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String placeholders = uniqueCoordinates.stream()
+                .map(c -> "?")
+                .collect(Collectors.joining(","));
+
+        String sql = "SELECT * FROM places WHERE CONCAT(latitude, ',', longitude) IN (" + placeholders + ")";
+
+        List<Place> existingPlaces = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(Place.class),
+                uniqueCoordinates.toArray());
+
+        return existingPlaces.stream()
+                .collect(Collectors.toMap(
+                        place -> place.getLatitude() + "," + place.getLongitude(),
+                        place -> place,
+                        (existing, replacement) -> existing
+                ));
+    }
+
+    private void savePlacesWithESIndexing(
+            List<Place> newPlacesToSave,
+            Map<Place, Integer> placeToIndexMap,
+            List<PlaceDTO> results,
+            List<ImportErrorDTO> errors) {
+
+        try {
+            // Bulk save to database
             List<Place> savedPlaces = repository.saveAll(newPlacesToSave);
 
-            // Bulk index vào Elasticsearch
+            // Add to results
+            savedPlaces.forEach(saved -> results.add(mapper.toDTO(saved)));
+
+            // Sync ES indexing
+            indexPlacesToElasticsearch(savedPlaces);
+
+        } catch (Exception ex) {
+            // Fallback: individual saves
+            handleIndividualPlaceSave(newPlacesToSave, placeToIndexMap, results, errors);
+        }
+    }
+
+    private void indexPlacesToElasticsearch(List<Place> savedPlaces) {
+        try {
             List<PlaceDocument> documentsToIndex = savedPlaces.stream()
                     .map(mapper::toDocument)
                     .toList();
 
             placeESRepository.saveAll(documentsToIndex);
+            log.debug("Successfully indexed {} places to Elasticsearch", savedPlaces.size());
+
+        } catch (Exception ex) {
+            log.warn("Failed to bulk index places to Elasticsearch: {}", ex.getMessage());
+
+            // Individual ES indexing fallback
+            savedPlaces.forEach(place -> {
+                try {
+                    PlaceDocument document = mapper.toDocument(place);
+                    placeESRepository.save(document);
+                } catch (Exception innerEx) {
+                    log.warn("Failed to index place {} to ES: {}", place.getId(), innerEx.getMessage());
+                    // ES indexing errors không add vào main errors vì không critical
+                }
+            });
+        }
+    }
+
+    private void handleIndividualPlaceSave(
+            List<Place> newPlacesToSave,
+            Map<Place, Integer> placeToIndexMap,
+            List<PlaceDTO> results,
+            List<ImportErrorDTO> errors) {
+
+        List<Place> successfullyPersisted = new ArrayList<>();
+
+        for (Place place : newPlacesToSave) {
+            Integer requestIndex = placeToIndexMap.get(place);
+
+            try {
+                Place saved = repository.save(place);
+                results.add(mapper.toDTO(saved));
+                successfullyPersisted.add(saved);
+
+            } catch (Exception innerEx) {
+                errors.add(new ImportErrorDTO(requestIndex != null ? requestIndex : -1,
+                        "Failed to save place: " + innerEx.getMessage()));
+            }
         }
 
-        return results;
+        // Index successful places to ES
+        if (!successfullyPersisted.isEmpty()) {
+            indexPlacesToElasticsearch(successfullyPersisted);
+        }
     }
 
     @Override

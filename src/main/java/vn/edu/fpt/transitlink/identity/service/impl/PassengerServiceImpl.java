@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.fpt.transitlink.identity.dto.AccountDTO;
+import vn.edu.fpt.transitlink.identity.dto.ImportAccountResultDTO;
+import vn.edu.fpt.transitlink.identity.dto.ImportPassengerResultDTO;
 import vn.edu.fpt.transitlink.identity.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.identity.entity.Passenger;
 import vn.edu.fpt.transitlink.identity.enumeration.AuthErrorCode;
@@ -20,12 +22,10 @@ import vn.edu.fpt.transitlink.identity.request.ImportPassengerRequest;
 import vn.edu.fpt.transitlink.identity.request.UpdatePassengerRequest;
 import vn.edu.fpt.transitlink.identity.service.AccountService;
 import vn.edu.fpt.transitlink.identity.service.PassengerService;
+import vn.edu.fpt.transitlink.shared.dto.ImportErrorDTO;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -55,6 +55,7 @@ public class PassengerServiceImpl implements PassengerService {
 
         // Create new passenger
         Passenger passenger = new Passenger();
+        passenger.setId(UUID.randomUUID());
         passenger.setAccountId(account.id());
         passenger.setTotalCompletedTrips(request.totalCompletedTrips() != null ? request.totalCompletedTrips() : 0);
         passenger.setTotalCancelledTrips(request.totalCancelledTrips() != null ? request.totalCancelledTrips() : 0);
@@ -250,79 +251,156 @@ public class PassengerServiceImpl implements PassengerService {
     )
     @Override
     @Transactional
-    public List<PassengerDTO> importPassengers(List<ImportPassengerRequest> requests) {
+    public ImportPassengerResultDTO importPassengers(List<ImportPassengerRequest> requests) {
         if (requests.isEmpty()) {
-            return new ArrayList<>();
+            return new ImportPassengerResultDTO(0, 0, List.of(), List.of());
         }
 
-        // Step 1: Extract account info and import accounts in bulk
+        List<PassengerDTO> results = new ArrayList<>();
+        List<ImportErrorDTO> errors = new ArrayList<>();
+
+        // Step 1: Import accounts
         List<ImportAccountRequest> accountRequests = requests.stream()
                 .map(ImportPassengerRequest::accountInfo)
                 .toList();
 
-        // Bulk import accounts (returns existing + newly created accounts)
-        List<AccountDTO> accountResults = accountService.importAccounts(accountRequests);
+        ImportAccountResultDTO accountImportResult = accountService.importAccounts(accountRequests);
+        List<AccountDTO> successfulAccounts = accountImportResult.successfulList();
 
-        // Step 2: Extract account IDs from the imported accounts
-        List<UUID> accountIds = accountResults.stream()
-                .map(AccountDTO::id)
-                .toList();
+        // Create mapping: request index → account (nếu account import thành công)
+        Map<Integer, AccountDTO> requestIndexToAccountMap = new HashMap<>();
 
-        // Step 3: Bulk check which accounts already have passengers
-        List<Passenger> existingPassengers = passengerRepository.findByAccountIdsIn(accountIds);
-
-        // Create lookup map for existing passengers by accountId
-        Map<UUID, Passenger> existingPassengerMap = existingPassengers.stream()
-                .collect(Collectors.toMap(
-                        Passenger::getAccountId,
-                        passenger -> passenger,
-                        (existing, replacement) -> existing // Keep existing if duplicate
-                ));
-
-        List<PassengerDTO> results = new ArrayList<>();
-        List<Passenger> newPassengersToSave = new ArrayList<>();
-
-        // Step 4: Process each import request
+        // Map successful accounts back to their original request index
         for (int i = 0; i < requests.size(); i++) {
-            ImportPassengerRequest request = requests.get(i);
-            AccountDTO account = accountResults.get(i);
-            UUID accountId = account.id();
+            ImportAccountRequest originalAccountRequest = requests.get(i).accountInfo();
 
-            Passenger existingPassenger = existingPassengerMap.get(accountId);
+            // Tìm account tương ứng trong successful list
+            AccountDTO matchedAccount = successfulAccounts.stream()
+                    .filter(acc -> acc.email().equals(originalAccountRequest.email()))
+                    .findFirst()
+                    .orElse(null);
 
-            if (existingPassenger != null) {
-                // Passenger already exists, return existing one
-                results.add(mapToPassengerDTO(existingPassenger, account));
+            if (matchedAccount != null) {
+                requestIndexToAccountMap.put(i, matchedAccount);
             } else {
-                // Create new passenger
-                Passenger newPassenger = createNewPassengerFromImport(request, accountId);
-                newPassengersToSave.add(newPassenger);
-                results.add(mapToPassengerDTO(newPassenger, account));
+                // Account import failed cho request này
+                errors.add(new ImportErrorDTO(i, "Account import failed for email: " + originalAccountRequest.email()));
             }
         }
 
-        // Step 5: Bulk insert new passengers
-        if (!newPassengersToSave.isEmpty()) {
-            passengerRepository.saveAll(newPassengersToSave);
+        // Step 2: Bulk check existing passengers (chỉ với successful accounts)
+        List<UUID> successfulAccountIds = requestIndexToAccountMap.values().stream()
+                .map(AccountDTO::id)
+                .toList();
+
+        Map<UUID, Passenger> existingPassengerMap = Collections.emptyMap();
+        if (!successfulAccountIds.isEmpty()) {
+            List<Passenger> existingPassengers = passengerRepository.findByAccountIdsIn(successfulAccountIds);
+            existingPassengerMap = existingPassengers.stream()
+                    .collect(Collectors.toMap(
+                            Passenger::getAccountId,
+                            passenger -> passenger,
+                            (existing, replacement) -> existing
+                    ));
         }
 
-        return results;
+        // Step 3: Process passengers và prepare data cho bulk save
+        Map<Passenger, Integer> passengerToRequestIndexMap = new HashMap<>();
+        Map<Passenger, AccountDTO> passengerToAccountMap = new HashMap<>();
+        List<Passenger> newPassengersToSave = new ArrayList<>();
+
+        for (Map.Entry<Integer, AccountDTO> entry : requestIndexToAccountMap.entrySet()) {
+            int requestIndex = entry.getKey();
+            AccountDTO account = entry.getValue();
+            ImportPassengerRequest request = requests.get(requestIndex);
+
+            try {
+                Passenger existingPassenger = existingPassengerMap.get(account.id());
+
+                if (existingPassenger != null) {
+                    // Existing passenger
+                    results.add(mapToPassengerDTO(existingPassenger, account));
+                } else {
+                    // New passenger
+                    Passenger newPassenger = createNewPassengerFromImport(request, account.id());
+                    newPassengersToSave.add(newPassenger);
+
+                    // Track mappings cho bulk save
+                    passengerToRequestIndexMap.put(newPassenger, requestIndex);
+                    passengerToAccountMap.put(newPassenger, account);
+                }
+            } catch (Exception ex) {
+                errors.add(new ImportErrorDTO(requestIndex, "Failed to process passenger: " + ex.getMessage()));
+            }
+        }
+
+        // Step 4: Bulk save new passengers
+        if (!newPassengersToSave.isEmpty()) {
+            try {
+                List<Passenger> savedPassengers = passengerRepository.saveAll(newPassengersToSave);
+
+                // Create mapping: accountId → saved passenger để match với original passengers
+                Map<UUID, Passenger> accountIdToSavedPassengerMap = savedPassengers.stream()
+                        .collect(Collectors.toMap(Passenger::getAccountId, passenger -> passenger));
+
+                // Add saved passengers to results theo đúng order
+                for (Passenger originalPassenger : newPassengersToSave) {
+                    Passenger savedPassenger = accountIdToSavedPassengerMap.get(originalPassenger.getAccountId());
+                    AccountDTO account = passengerToAccountMap.get(originalPassenger);
+
+                    if (savedPassenger != null && account != null) {
+                        results.add(mapToPassengerDTO(savedPassenger, account));
+                    }
+                }
+
+            } catch (Exception ex) {
+                // Fallback: save individually
+                handleIndividualPassengerSave(newPassengersToSave, passengerToRequestIndexMap,
+                        passengerToAccountMap, results, errors);
+            }
+        }
+
+        // Add account import errors to final result
+        errors.addAll(accountImportResult.failedList());
+
+        int successful = results.size();
+        int failed = requests.size() - successful;
+
+        return new ImportPassengerResultDTO(successful, failed, errors, results);
+    }
+
+    private void handleIndividualPassengerSave(
+            List<Passenger> newPassengersToSave,
+            Map<Passenger, Integer> passengerToRequestIndexMap,
+            Map<Passenger, AccountDTO> passengerToAccountMap,
+            List<PassengerDTO> results,
+            List<ImportErrorDTO> errors) {
+
+        for (Passenger newPassenger : newPassengersToSave) {
+            Integer requestIndex = passengerToRequestIndexMap.get(newPassenger);
+            AccountDTO account = passengerToAccountMap.get(newPassenger);
+
+            try {
+                Passenger saved = passengerRepository.save(newPassenger);
+                results.add(mapToPassengerDTO(saved, account));
+
+            } catch (Exception innerEx) {
+                errors.add(new ImportErrorDTO(requestIndex != null ? requestIndex : -1,
+                        "Failed to save passenger for accountId " + newPassenger.getAccountId() +
+                                ": " + innerEx.getMessage()));
+            }
+        }
     }
 
     private Passenger createNewPassengerFromImport(ImportPassengerRequest request, UUID accountId) {
         Passenger passenger = new Passenger();
+        passenger.setId(UUID.randomUUID());
         passenger.setAccountId(accountId);
-
-        // Set trip statistics with defaults
-        passenger.setTotalCompletedTrips(
-                request.totalCompletedTrips() != null ? request.totalCompletedTrips() : 0
-        );
-        passenger.setTotalCancelledTrips(
-                request.totalCancelledTrips() != null ? request.totalCancelledTrips() : 0
-        );
-
+        passenger.setTotalCompletedTrips(request.totalCompletedTrips() != null ? request.totalCompletedTrips() : 0);
+        passenger.setTotalCancelledTrips(request.totalCancelledTrips() != null ? request.totalCancelledTrips() : 0);
         return passenger;
     }
+
 
     /**
      * Maps Passenger entity to PassengerDTO with all related data

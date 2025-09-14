@@ -23,7 +23,7 @@ public class ExcelFileUtils {
 
             Row headerRow = sheet.getRow(0);
             if (headerRow == null) {
-                throw new IllegalArgumentException("Không tìm thấy header ở dòng 0");
+                throw new IllegalArgumentException("Not found header row at index 0");
             }
 
             List<String> headers = extractHeaders(headerRow);
@@ -50,7 +50,7 @@ public class ExcelFileUtils {
 
             Row headerRow = sheet.getRow(0);
             if (headerRow == null) {
-                throw new IllegalArgumentException("Không tìm thấy header ở dòng 0");
+                throw new IllegalArgumentException("Not found header row at index 0");
             }
 
             List<String> headers = extractHeaders(headerRow);
@@ -160,8 +160,8 @@ public class ExcelFileUtils {
 
         String s = value.toString();
         if (targetType == String.class) return s;
-        if (targetType == int.class || targetType == Integer.class) return Double.valueOf(s).intValue();
-        if (targetType == long.class || targetType == Long.class) return Double.valueOf(s).longValue();
+        if (targetType == int.class || targetType == Integer.class) return Integer.parseInt(s);
+        if (targetType == long.class || targetType == Long.class) return Long.parseLong(s);
         if (targetType == double.class || targetType == Double.class) return Double.parseDouble(s);
         if (targetType == boolean.class || targetType == Boolean.class) return Boolean.parseBoolean(s);
         if (targetType == LocalDateTime.class && value instanceof LocalDateTime) return value;
