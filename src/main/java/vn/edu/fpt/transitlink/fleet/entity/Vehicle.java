@@ -4,6 +4,7 @@ package vn.edu.fpt.transitlink.fleet.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import vn.edu.fpt.transitlink.fleet.enumeration.FuelType;
+import vn.edu.fpt.transitlink.fleet.enumeration.VehicleStatus;
 import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
 
 import java.util.UUID;
@@ -24,5 +25,7 @@ public class Vehicle extends BaseSoftDeletableEntity {
     private Integer capacity;
     private FuelType fuelType;
     private Float fuelConsumptionRate;
+    @Enumerated(EnumType.STRING)
+    private VehicleStatus status;
     private UUID depotId;
 }

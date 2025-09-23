@@ -27,6 +27,7 @@ import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
 import vn.edu.fpt.transitlink.trip.entity.PassengerJourney;
 import vn.edu.fpt.transitlink.trip.entity.PassengerJourneyDocument;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
+import vn.edu.fpt.transitlink.trip.enumeration.JourneyType;
 import vn.edu.fpt.transitlink.trip.exception.TripErrorCode;
 import vn.edu.fpt.transitlink.trip.repository.PassengerJourneyESRepository;
 import vn.edu.fpt.transitlink.trip.repository.PassengerJourneyRepository;
@@ -67,7 +68,7 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
             journey.setPassengerId(passenger.id());
             journey.setPickupPlaceId(request.pickupPlaceId());
             journey.setDropoffPlaceId(request.dropoffPlaceId());
-            journey.setLastestStopArrivalTime(request.lastestStopArrivalTime());
+            journey.setMainStopArrivalTime(request.lastestStopArrivalTime());
             journey.setSeatCount(request.seatCount());
             journey.setStatus(JourneyStatus.NOT_SCHEDULED);
 
@@ -116,16 +117,36 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
                 journey.setDropoffPlaceId(request.dropoffPlaceId());
             }
 
-            if (request.routeId() != null) {
-                journey.setRouteId(request.routeId());
-            }
-
-            if (request.lastestStopArrivalTime() != null) {
-                journey.setLastestStopArrivalTime(request.lastestStopArrivalTime());
+            if (request.mainStopArrivalTime() != null) {
+                journey.setMainStopArrivalTime(request.mainStopArrivalTime());
             }
 
             if (request.seatCount() != null) {
                 journey.setSeatCount(request.seatCount());
+            }
+
+            if (request.journeyType() != null) {
+                journey.setJourneyType(request.journeyType());
+            }
+
+            if (request.geometry() != null) {
+                journey.setGeometry(request.geometry());
+            }
+
+            if (request.plannedPickupTime() != null) {
+                journey.setPlannedPickupTime(request.plannedPickupTime());
+            }
+
+            if (request.actualPickupTime() != null) {
+                journey.setActualPickupTime(request.actualPickupTime());
+            }
+
+            if (request.plannedDropoffTime() != null) {
+                journey.setPlannedDropoffTime(request.plannedDropoffTime());
+            }
+
+            if (request.actualDropoffTime() != null) {
+                journey.setActualDropoffTime(request.actualDropoffTime());
             }
 
             if (request.status() != null) {
@@ -222,6 +243,13 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
     }
 
     @Override
+    public List<PassengerJourneyDTO> getAllPassengerJourneysByIds(List<UUID> ids) {
+        return passengerJourneyRepository.findAllById(ids).stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
+
+    @Override
     public List<PassengerJourneyDTO> getPassengerJourneysByStatus(JourneyStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<PassengerJourney> journeyPage = passengerJourneyRepository.findByStatus(status, pageable);
@@ -238,8 +266,8 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
 
     @Override
     public List<PassengerJourneyDTO> getJourneysByDateRange(OffsetDateTime startDate, OffsetDateTime endDate, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("lastestStopArrivalTime").ascending());
-        Page<PassengerJourney> journeyPage = passengerJourneyRepository.findByLastestStopArrivalTimeBetween(startDate, endDate, pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("mainStopArrivalTime").ascending());
+        Page<PassengerJourney> journeyPage = passengerJourneyRepository.findByMainStopArrivalTimeBetween(startDate, endDate, pageable);
 
         return journeyPage.getContent().stream()
                 .map(this::mapToDTO)
@@ -470,16 +498,18 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
                     // Parse journey-specific data from row
                     OffsetDateTime arrivalTime = parseArrivalTime(row, request);
                     Integer seatCount = parseSeatCount(row, request);
+                    String journeyTypeStr = getValueIfHeaderExists(row, request.journeyType().toString());
+                    JourneyType journeyType = JourneyType.valueOf(journeyTypeStr);
 
                     if (arrivalTime != null && seatCount != null) {
                         PassengerJourney journey = new PassengerJourney();
                         journey.setPassengerId(passenger.id());
                         journey.setPickupPlaceId(pickupPlace.id());
                         journey.setDropoffPlaceId(dropoffPlace.id());
-                        journey.setLastestStopArrivalTime(arrivalTime);
+                        journey.setMainStopArrivalTime(arrivalTime);
                         journey.setSeatCount(seatCount);
                         journey.setStatus(JourneyStatus.NOT_SCHEDULED);
-
+                        journey.setJourneyType(journeyType);
                         entities.add(journey);
                         successfulIndex++;
                     } else {
@@ -693,7 +723,6 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
         PassengerJourney journey = passengerJourneyRepository.findById(journeyId)
                 .orElseThrow(() -> new BusinessException(TripErrorCode.PASSENGER_JOURNEY_NOT_FOUND));
 
-        journey.setRouteId(routeId);
         journey.setStatus(JourneyStatus.SCHEDULED);
 
         PassengerJourney savedJourney = passengerJourneyRepository.save(journey);
@@ -765,14 +794,6 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
     }
 
     @Override
-    public List<PassengerJourneyDTO> getJourneysForRoute(UUID routeId) {
-        List<PassengerJourney> journeys = passengerJourneyRepository.findByRouteId(routeId);
-        return journeys.stream()
-                .map(this::mapToDTO)
-                .toList();
-    }
-
-    @Override
     public long countJourneysByStatus(JourneyStatus status) {
         return passengerJourneyRepository.countByStatus(status);
     }
@@ -797,11 +818,14 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
                 passenger,
                 pickupPlace,
                 dropoffPlace,
-                journey.getRouteId(),
-                journey.getLastestStopArrivalTime(),
-                journey.getActualPickupTime(),
-                journey.getActualDropoffTime(),
+                journey.getMainStopArrivalTime(),
                 journey.getSeatCount(),
+                journey.getJourneyType(),
+                journey.getGeometry(),
+                journey.getPlannedPickupTime(),
+                journey.getActualPickupTime(),
+                journey.getPlannedDropoffTime(),
+                journey.getActualDropoffTime(),
                 journey.getStatus()
         );
     }
@@ -817,8 +841,7 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
             document.setPickupPlaceName(pickupPlace.name());
             document.setDropoffPlaceId(journey.getDropoffPlaceId());
             document.setDropoffPlaceName(dropoffPlace.name());
-            document.setRouteId(journey.getRouteId());
-            document.setLastestStopArrivalTime(journey.getLastestStopArrivalTime());
+            document.setLastestStopArrivalTime(journey.getMainStopArrivalTime());
             document.setActualPickupTime(journey.getActualPickupTime());
             document.setActualDropoffTime(journey.getActualDropoffTime());
             document.setSeatCount(journey.getSeatCount());
@@ -841,11 +864,14 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
                 passenger,
                 pickupPlace,
                 dropoffPlace,
-                document.getRouteId(),
                 document.getLastestStopArrivalTime(),
-                document.getActualPickupTime(),
-                document.getActualDropoffTime(),
                 document.getSeatCount(),
+                null,
+                null,
+                null,
+                document.getActualPickupTime(),
+                null,
+                document.getActualDropoffTime(),
                 JourneyStatus.valueOf(document.getStatus())
         );
     }

@@ -3,6 +3,7 @@ package vn.edu.fpt.transitlink.trip.request;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import vn.edu.fpt.transitlink.trip.enumeration.JourneyType;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ImportPassengerJourneyRequest(
@@ -62,6 +63,10 @@ public record ImportPassengerJourneyRequest(
 
         @Schema(description = "Seat count", example = "Seat Count")
         @NotNull(message = "Column seatCount is required")
-        String seatCount
+        String seatCount,
+
+        @Schema(description = "Journey type", example = "Journey Type")
+        @NotNull(message = "Column journeyType is required")
+        String journeyType
 ) {
 }

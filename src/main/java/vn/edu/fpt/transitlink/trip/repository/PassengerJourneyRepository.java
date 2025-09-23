@@ -44,11 +44,8 @@ public interface PassengerJourneyRepository extends SoftDeletableRepository<Pass
     Page<PassengerJourney> findByPassengerIdAndStatusIn(UUID passengerId, List<JourneyStatus> statuses, Pageable pageable);
     long countByPassengerId(UUID passengerId);
 
-    // Find by route
-    List<PassengerJourney> findByRouteId(UUID routeId);
-
     // Find by date range
-    Page<PassengerJourney> findByLastestStopArrivalTimeBetween(OffsetDateTime startDate, OffsetDateTime endDate, Pageable pageable);
+    Page<PassengerJourney> findByMainStopArrivalTimeBetween(OffsetDateTime startDate, OffsetDateTime endDate, Pageable pageable);
 
     // Find by pickup or dropoff place
     Page<PassengerJourney> findByPickupPlaceIdOrDropoffPlaceId(UUID pickupPlaceId, UUID dropoffPlaceId, Pageable pageable);

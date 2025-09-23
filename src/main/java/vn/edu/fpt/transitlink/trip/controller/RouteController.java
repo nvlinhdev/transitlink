@@ -1,43 +1,27 @@
 package vn.edu.fpt.transitlink.trip.controller;
 
-import org.springframework.http.HttpStatus;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
+import vn.edu.fpt.transitlink.trip.request.OptimizationRouteRequest;
 import vn.edu.fpt.transitlink.trip.service.RouteService;
 import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 import vn.edu.fpt.transitlink.trip.dto.RouteDTO;
 
+import java.util.List;
+
+@RequiredArgsConstructor
+@RestController
 @RequestMapping("/api/trip/routes")
+@Tag(name = "Route Controller")
 public class RouteController {
     private final RouteService routeService;
 
-    public RouteController(RouteService routeService) {
-        this.routeService = routeService;
-    }
-
     @PostMapping
-    public ResponseEntity<StandardResponse<RouteDTO>> createRouteData(
-            // @Valid @RequestBody CreateRouteRequest request,
-            // Principal principal
-    ) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<StandardResponse<List<RouteDTO>>> optimizeRoute(@RequestBody OptimizationRouteRequest request) {
+        List<RouteDTO> routeDTO = routeService.optimizeRoute(request);
+        return  ResponseEntity.ok(StandardResponse.success(routeDTO));
     }
 
-    @PostMapping("/{id}/override")
-    public ResponseEntity<StandardResponse<Void>> overrideRoute() {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<StandardResponse<Void>> viewRouteList() {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<StandardResponse<Void>> deleteRouteData() {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-    }
 }

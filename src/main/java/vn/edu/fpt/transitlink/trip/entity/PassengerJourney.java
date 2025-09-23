@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.*;
 import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
+import vn.edu.fpt.transitlink.trip.enumeration.JourneyType;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @NoArgsConstructor
@@ -16,7 +18,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "passenger_journeys",
     uniqueConstraints = {
-            @UniqueConstraint(columnNames = {"passengerId", "pickupPlaceId", "dropoffPlaceId", "lastestStopArrivalTime"})
+            @UniqueConstraint(columnNames = {"passengerId", "pickupPlaceId", "dropoffPlaceId", "mainStopArrivalTime"})
     }
 )
 public class PassengerJourney extends BaseSoftDeletableEntity {
@@ -26,11 +28,18 @@ public class PassengerJourney extends BaseSoftDeletableEntity {
     private UUID passengerId;
     private UUID pickupPlaceId;
     private UUID dropoffPlaceId;
-    private UUID routeId;
-    private OffsetDateTime lastestStopArrivalTime; // thời gian mà xe chính sẽ đến điểm dừng cố định
-    private OffsetDateTime actualPickupTime;
-    private OffsetDateTime actualDropoffTime;
+    private OffsetDateTime mainStopArrivalTime;
     private Integer seatCount;
     @Enumerated(EnumType.STRING)
+    private JourneyType journeyType;
+    @Column(columnDefinition = "TEXT")
+    private String geometry;
+    private OffsetDateTime plannedPickupTime;
+    private OffsetDateTime actualPickupTime;
+    private OffsetDateTime plannedDropoffTime;
+    private OffsetDateTime actualDropoffTime;
+    @Enumerated(EnumType.STRING)
     private JourneyStatus status;
+    @OneToMany(mappedBy = "passengerJourney")
+    private List<StopJourneyMapping> stopJourneyMappings;
 }

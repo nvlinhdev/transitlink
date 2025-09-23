@@ -41,22 +41,22 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SystemException.class)
     public ResponseEntity<SimpleErrorResponse> handleSystemException(SystemException ex, HttpServletRequest request) {
-        log.error("System exception - Path: {}, Code: {}, Message: {}", request.getRequestURI(),
-                ex.getErrorCode().getCode(), ex.getMessage(), ex);
+        log.error("System exception - Path: {}, Message: {}, Cause: {}", request.getRequestURI(),
+                ex.getMessage(), ex);
 
         return ResponseEntity
-                .status(ex.getErrorCode().getHttpStatus())
-                .body(new SimpleErrorResponse(ex.getMessage(), ex.getErrorCode().getCode(), request.getRequestURI()));
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new SimpleErrorResponse(ex.getMessage(), ex.getClass().getSimpleName(), request.getRequestURI()));
     }
 
     @ExceptionHandler(ThirdPartyException.class)
     public ResponseEntity<SimpleErrorResponse> handleThirdPartyException(ThirdPartyException ex, HttpServletRequest request) {
-        log.warn("Third-party exception - Path: {}, Code: {}, Message: {}", request.getRequestURI(),
-                ex.getErrorCode().getCode(), ex.getMessage(), ex);
+        log.warn("Third-party exception - Path: {}, Message: {}, Service Name: {}, Code: {}, Body{}",
+                request.getRequestURI(), ex.getMessage(), ex.getServiceName(), ex.getStatusCode(), ex.getResponseBody());
 
         return ResponseEntity
-                .status(ex.getErrorCode().getHttpStatus())
-                .body(new SimpleErrorResponse(ex.getMessage(), ex.getErrorCode().getCode(), request.getRequestURI()));
+                .status(ex.getStatusCode())
+                .body(new SimpleErrorResponse(ex.getMessage(), ex.getClass().getSimpleName(), request.getRequestURI()));
     }
 
     /* ========= Unexpected ========= */

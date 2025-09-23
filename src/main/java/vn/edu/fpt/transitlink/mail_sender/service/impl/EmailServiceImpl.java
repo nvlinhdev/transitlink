@@ -13,7 +13,6 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import vn.edu.fpt.transitlink.mail_sender.config.MailProperties;
 import vn.edu.fpt.transitlink.mail_sender.dto.EmailAttachment;
 import vn.edu.fpt.transitlink.mail_sender.dto.EmailRequest;
-import vn.edu.fpt.transitlink.mail_sender.exception.EmailSenderErrorCode;
 import vn.edu.fpt.transitlink.mail_sender.service.EmailService;
 import vn.edu.fpt.transitlink.shared.exception.SystemException;
 
@@ -78,7 +77,7 @@ public class EmailServiceImpl implements EmailService {
                         validMessages.size(), failedCount, totalCount);
             } catch (Exception e) {
                 log.error("Failed to send batch email", e);
-                throw new SystemException(EmailSenderErrorCode.SEND_BULK_EMAIL_ERROR, e);
+                throw new SystemException(e.getMessage(), e);
             }
         } else {
             log.warn("No valid emails to send after processing {} requests", totalCount);

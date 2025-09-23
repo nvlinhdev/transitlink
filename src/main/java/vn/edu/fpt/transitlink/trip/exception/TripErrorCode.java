@@ -22,12 +22,12 @@ public enum TripErrorCode implements ErrorCodeDefinition {
     EXCEL_IMPORT_FAILED("EXCEL_IMPORT_FAILED", "Excel file import failed", HttpStatus.BAD_REQUEST),
 
     //Routes
-    ROUTE_NOT_FOUND("ROUTE_NOT_FOUND", "Route not found", HttpStatus.NOT_FOUND),
-    ROUTE_ALREADY_EXISTS("ROUTE_ALREADY_EXISTS", "Route already exists", HttpStatus.CONFLICT),
+    ROUTE_NOT_FOUND("ROUTE_NOT_FOUND", "OptimizationRoute not found", HttpStatus.NOT_FOUND),
+    ROUTE_ALREADY_EXISTS("ROUTE_ALREADY_EXISTS", "OptimizationRoute already exists", HttpStatus.CONFLICT),
     ROUTE_ACCESS_DENIED("ROUTE_ACCESS_DENIED", "Access denied to route", HttpStatus.FORBIDDEN),
-    ROUTE_UPDATE_FAILED("ROUTE_UPDATE_FAILED", "Route update failed", HttpStatus.INTERNAL_SERVER_ERROR),
-    ROUTE_DELETION_FAILED("ROUTE_DELETION_FAILED", "Route deletion failed", HttpStatus.INTERNAL_SERVER_ERROR),
-    ROUTE_CREATION_FAILED("ROUTE_CREATION_FAILED", "Route creation failed", HttpStatus.INTERNAL_SERVER_ERROR),
+    ROUTE_UPDATE_FAILED("ROUTE_UPDATE_FAILED", "OptimizationRoute update failed", HttpStatus.INTERNAL_SERVER_ERROR),
+    ROUTE_DELETION_FAILED("ROUTE_DELETION_FAILED", "OptimizationRoute deletion failed", HttpStatus.INTERNAL_SERVER_ERROR),
+    ROUTE_CREATION_FAILED("ROUTE_CREATION_FAILED", "OptimizationRoute creation failed", HttpStatus.INTERNAL_SERVER_ERROR),
     ;
 
     private final String code;

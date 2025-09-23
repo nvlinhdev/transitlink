@@ -18,4 +18,5 @@ public interface VehicleService {
     long countVehicles();
     List<VehicleDTO> getDeletedVehicles(int page, int size);
     long countDeletedVehicles();
+    List<VehicleDTO> getAllVehiclesByIds(List<UUID> ids);
 }

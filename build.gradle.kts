@@ -81,7 +81,6 @@ repositories { mavenCentral() }
 dependencies {
     val openApiVersion = "2.8.9"
     val mapstructVersion = "1.6.3"
-    val firebaseAdminVersion = "9.5.0"
     val mapstructLombokBindingVersion = "0.2.0"
     val jwtVersion = "0.12.7"
     val springCrytoVersion = "6.5.3"
@@ -114,12 +113,14 @@ dependencies {
     implementation("org.springframework.security:spring-security-crypto:${springCrytoVersion}")
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openApiVersion")
-    // Firebase
-    implementation("com.google.firebase:firebase-admin:$firebaseAdminVersion")
     //  Access Microsoft Format Files
     implementation("org.apache.poi:poi-ooxml:5.4.1")
     // MapStruct
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
+    // Mapbox geoJson
+    implementation("com.mapbox.mapboxsdk:mapbox-sdk-geojson:5.8.0")
+    // https://mvnrepository.com/artifact/com.google.http-client/google-http-client-jackson2
+    implementation("com.google.http-client:google-http-client-jackson2:2.0.0")
     // PostgreSQL
     runtimeOnly("org.postgresql:postgresql")
     // Devtools

@@ -1,13 +1,16 @@
 package vn.edu.fpt.transitlink.trip.mapper;
 
 import org.mapstruct.Mapper;
-import org.mapstruct.factory.Mappers;
+import org.mapstruct.Mapping;
 import vn.edu.fpt.transitlink.trip.dto.StopDTO;
 import vn.edu.fpt.transitlink.trip.entity.Stop;
 
-@Mapper(componentModel = "spring")
-public interface StopMapper {
-    public static final StopMapper INSTANCE = Mappers.getMapper(StopMapper.class);
+import java.util.List;
 
-    public StopDTO toDTO(Stop stop);
+@Mapper(componentModel = "spring", uses = {StopJourneyMappingMapper.class})
+public interface StopMapper {
+    @Mapping(target = "passengers", source = "stopJourneyMappings")
+    StopDTO toStopDTO(Stop stop);
+
+    List<StopDTO> toStopDTOList(List<Stop> stops);
 }

@@ -279,4 +279,21 @@ public class VehicleServiceImpl implements VehicleService {
     public long countDeletedVehicles() {
         return vehicleRepository.countDeleted();
     }
+
+    @Override
+    public List<VehicleDTO> getAllVehiclesByIds(List<UUID> ids) {
+        return vehicleRepository.findAllById(ids).stream()
+                .map(vehicle -> {
+                    DepotDTO depotDTO = depotService.getDepot(vehicle.getDepotId());
+                    return new VehicleDTO(
+                            vehicle.getId(),
+                            vehicle.getName(),
+                            vehicle.getLicensePlate(),
+                            vehicle.getFuelType(),
+                            vehicle.getCapacity(),
+                            vehicle.getFuelConsumptionRate(),
+                            depotDTO
+                    );
+                }).toList();
+    }
 }

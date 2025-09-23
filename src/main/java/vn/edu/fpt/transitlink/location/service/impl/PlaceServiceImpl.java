@@ -52,39 +52,76 @@ public class PlaceServiceImpl implements PlaceService {
             return new ImportPlaceResultDTO(0, 0, List.of(), List.of());
         }
 
-        List<PlaceDTO> results = new ArrayList<>();
+        List<PlaceDTO> results = new ArrayList<>(Collections.nCopies(requests.size(), null));
         List<ImportErrorDTO> errors = new ArrayList<>();
 
         try {
-            // Step 1: Bulk check existing places
-            Map<String, Place> existingPlaceMap = bulkCheckExistingPlaces(requests);
-
-            // Step 2: Separate existing vs new places
-            List<Place> newPlacesToSave = new ArrayList<>();
-            Map<Place, Integer> placeToIndexMap = new HashMap<>();
-
+            // B1. Gom các request trùng nhau theo key lat,lon
+            Map<String, List<Integer>> coordinateToIndexes = new HashMap<>();
             for (int i = 0; i < requests.size(); i++) {
-                ImportPlaceRequest request = requests.get(i);
-                String coordinateKey = request.latitude() + "," + request.longitude();
-
-                try {
-                    Place existingPlace = existingPlaceMap.get(coordinateKey);
-
-                    if (existingPlace != null) {
-                        results.add(mapper.toDTO(existingPlace));
-                    } else {
-                        Place newPlace = mapper.toEntity(request);
-                        newPlacesToSave.add(newPlace);
-                        placeToIndexMap.put(newPlace, i);
-                    }
-                } catch (Exception ex) {
-                    errors.add(new ImportErrorDTO(i, "Failed to process place: " + ex.getMessage()));
-                }
+                ImportPlaceRequest r = requests.get(i);
+                String key = r.latitude() + "," + r.longitude();
+                coordinateToIndexes.computeIfAbsent(key, k -> new ArrayList<>()).add(i);
             }
 
-            // Step 3: Save new places và index ES
+            // B2. Lấy danh sách unique tọa độ
+            Set<String> uniqueCoordinates = coordinateToIndexes.keySet();
+
+            // B3. Truy vấn DB lấy các place đã tồn tại
+            String placeholders = String.join(",", Collections.nCopies(uniqueCoordinates.size(), "?"));
+            String sql = "SELECT * FROM places WHERE CONCAT(latitude, ',', longitude) IN (" + placeholders + ")";
+            List<Place> existingPlaces = jdbcTemplate.query(
+                    sql,
+                    new BeanPropertyRowMapper<>(Place.class),
+                    uniqueCoordinates.toArray()
+            );
+
+            Map<String, Place> existingMap = existingPlaces.stream()
+                    .collect(Collectors.toMap(
+                            p -> p.getLatitude() + "," + p.getLongitude(),
+                            p -> p
+                    ));
+
+            List<Place> newPlacesToSave = new ArrayList<>();
+            Map<String, Place> newMap = new HashMap<>();
+
+            // B4. Xử lý từng group theo coordinate
+            for (var entry : coordinateToIndexes.entrySet()) {
+                String coordKey = entry.getKey();
+                List<Integer> indexes = entry.getValue();
+
+                Place place;
+                if (existingMap.containsKey(coordKey)) {
+                    place = existingMap.get(coordKey);
+                } else if (newMap.containsKey(coordKey)) {
+                    place = newMap.get(coordKey);
+                } else {
+                    // Chưa có thì tạo entity mới
+                    ImportPlaceRequest representativeReq = requests.get(indexes.get(0));
+                    place = mapper.toEntity(representativeReq);
+                    newPlacesToSave.add(place);
+                    newMap.put(coordKey, place);
+                }
+
+                // Tạm thời map DTO null, lát nữa khi save xong sẽ update
+            }
+
+            // B5. Save tất cả new place
             if (!newPlacesToSave.isEmpty()) {
-                savePlacesWithESIndexing(newPlacesToSave, placeToIndexMap, results, errors);
+                List<Place> savedPlaces = repository.saveAll(newPlacesToSave);
+                savedPlaces.forEach(p -> newMap.put(p.getLatitude() + "," + p.getLongitude(), p));
+                indexPlacesToElasticsearch(savedPlaces);
+            }
+
+            // B6. Điền kết quả cho từng index trong results
+            for (var entry : coordinateToIndexes.entrySet()) {
+                String coordKey = entry.getKey();
+                Place place = existingMap.containsKey(coordKey) ? existingMap.get(coordKey) : newMap.get(coordKey);
+                PlaceDTO dto = mapper.toDTO(place);
+
+                for (Integer idx : entry.getValue()) {
+                    results.set(idx, dto);
+                }
             }
 
         } catch (Exception ex) {
@@ -94,64 +131,10 @@ public class PlaceServiceImpl implements PlaceService {
             return new ImportPlaceResultDTO(0, requests.size(), errors, List.of());
         }
 
-        int successful = results.size();
+        int successful = (int) results.stream().filter(Objects::nonNull).count();
         int failed = requests.size() - successful;
 
         return new ImportPlaceResultDTO(successful, failed, errors, results);
-    }
-
-    private Map<String, Place> bulkCheckExistingPlaces(List<ImportPlaceRequest> requests) {
-        if (requests.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        List<String> uniqueCoordinates = requests.stream()
-                .map(r -> r.latitude() + "," + r.longitude())
-                .distinct()
-                .toList();
-
-        if (uniqueCoordinates.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        String placeholders = uniqueCoordinates.stream()
-                .map(c -> "?")
-                .collect(Collectors.joining(","));
-
-        String sql = "SELECT * FROM places WHERE CONCAT(latitude, ',', longitude) IN (" + placeholders + ")";
-
-        List<Place> existingPlaces = jdbcTemplate.query(sql,
-                new BeanPropertyRowMapper<>(Place.class),
-                uniqueCoordinates.toArray());
-
-        return existingPlaces.stream()
-                .collect(Collectors.toMap(
-                        place -> place.getLatitude() + "," + place.getLongitude(),
-                        place -> place,
-                        (existing, replacement) -> existing
-                ));
-    }
-
-    private void savePlacesWithESIndexing(
-            List<Place> newPlacesToSave,
-            Map<Place, Integer> placeToIndexMap,
-            List<PlaceDTO> results,
-            List<ImportErrorDTO> errors) {
-
-        try {
-            // Bulk save to database
-            List<Place> savedPlaces = repository.saveAll(newPlacesToSave);
-
-            // Add to results
-            savedPlaces.forEach(saved -> results.add(mapper.toDTO(saved)));
-
-            // Sync ES indexing
-            indexPlacesToElasticsearch(savedPlaces);
-
-        } catch (Exception ex) {
-            // Fallback: individual saves
-            handleIndividualPlaceSave(newPlacesToSave, placeToIndexMap, results, errors);
-        }
     }
 
     private void indexPlacesToElasticsearch(List<Place> savedPlaces) {

@@ -1,14 +1,13 @@
 package vn.edu.fpt.transitlink.trip.mapper;
 
 import org.mapstruct.Mapper;
-import org.mapstruct.factory.Mappers;
-import vn.edu.fpt.transitlink.trip.dto.RouteDTO;
-import vn.edu.fpt.transitlink.trip.entity.Route;
+import vn.edu.fpt.transitlink.trip.dto.*;
+import vn.edu.fpt.transitlink.trip.entity.*;
 
-@Mapper(componentModel = "spring")
+import java.util.List;
+
+@Mapper(componentModel = "spring", uses = {StopMapper.class})
 public interface RouteMapper {
-    public static final RouteMapper INSTANCE = Mappers.getMapper(RouteMapper.class);
-
-    public RouteDTO toDTO(Route route);
-
+    RouteDTO toDTO(Route route);
+    List<RouteDTO> toDTOList(List<Route> routes);
 }

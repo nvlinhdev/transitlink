@@ -22,11 +22,13 @@ public interface PassengerJourneyService {
     PassengerJourneyDTO deletePassengerJourney(UUID id, UUID deletedBy);
     PassengerJourneyDTO restorePassengerJourney(UUID id);
 
+
     // List and paginate operations
     List<PassengerJourneyDTO> getPassengerJourneys(int page, int size);
     long countPassengerJourneys();
     List<PassengerJourneyDTO> getDeletedPassengerJourneys(int page, int size);
     long countDeletedPassengerJourneys();
+    List<PassengerJourneyDTO> getAllPassengerJourneysByIds(List<UUID> ids);
 
     // Status-based filtering
     List<PassengerJourneyDTO> getPassengerJourneysByStatus(JourneyStatus status, int page, int size);
@@ -51,13 +53,11 @@ public interface PassengerJourneyService {
     // Bulk operations
     ImportJourneyResultDTO importPassengerJourneysFromExcel(MultipartFile file, ImportPassengerJourneyRequest request);
 
-    // Route service integration methods
+    // OptimizationRoute service integration methods
     PassengerJourneyDTO assignRoute(UUID journeyId, UUID routeId);
     PassengerJourneyDTO updateJourneyStatus(UUID journeyId, JourneyStatus status);
     PassengerJourneyDTO setActualPickupTime(UUID journeyId, OffsetDateTime pickupTime);
     PassengerJourneyDTO setActualDropoffTime(UUID journeyId, OffsetDateTime dropoffTime);
-    List<PassengerJourneyDTO> getJourneysForRoute(UUID routeId);
-
     // Statistics
     long countJourneysByStatus(JourneyStatus status);
     long countJourneysByPassenger(UUID passengerId);
