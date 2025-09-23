@@ -29,7 +29,7 @@ public class DriverController {
 
     @Operation(summary = "Create driver",
             description = "Create a new driver with associated account")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('DRIVER')")
     @PostMapping
     public ResponseEntity<StandardResponse<DriverDTO>> createDriver(@Valid @RequestBody CreateDriverRequest request) {
         DriverDTO result = driverService.createDriver(request);
