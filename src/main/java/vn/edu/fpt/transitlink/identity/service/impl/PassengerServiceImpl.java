@@ -74,6 +74,32 @@ public class PassengerServiceImpl implements PassengerService {
         return mapToPassengerDTO(passenger);
     }
 
+    @Override
+    public List<PassengerDTO> getPassengersByIds(List<UUID> passengerIds) {
+        List<Passenger> passengers = passengerRepository.findAllById(passengerIds);
+        return mapToPassengerDTOList(passengers);
+    }
+
+    private List<PassengerDTO> mapToPassengerDTOList(List<Passenger> passengers) {
+        List<UUID> accountIds = passengers.stream()
+                .map(Passenger::getAccountId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        List<AccountDTO> accounts = accountService.getAccountsByIds(accountIds);
+
+        return passengers.stream()
+                .map(passenger -> {
+                    AccountDTO account = accounts.stream()
+                            .filter(acc -> acc.id().equals(passenger.getAccountId()))
+                            .findFirst()
+                            .orElse(null);
+                    return mapToPassengerDTO(passenger, account);
+                })
+                .toList();
+    }
+
     @Caching(
             put = {@CachePut(value = "passengersById", key = "#id")},
             evict = {@CacheEvict(value = "passengersPage", allEntries = true)}

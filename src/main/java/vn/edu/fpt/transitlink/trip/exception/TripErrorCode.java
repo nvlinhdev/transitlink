@@ -23,6 +23,7 @@ public enum TripErrorCode implements ErrorCodeDefinition {
 
     //Routes
     ROUTE_NOT_FOUND("ROUTE_NOT_FOUND", "OptimizationRoute not found", HttpStatus.NOT_FOUND),
+    DRIVER_HAS_OVERLAPPING_ROUTE("DRIVER_HAS_OVERLAPPING_ROUTE", "Driver has overlapping route", HttpStatus.BAD_REQUEST),
     ROUTE_ALREADY_EXISTS("ROUTE_ALREADY_EXISTS", "OptimizationRoute already exists", HttpStatus.CONFLICT),
     ROUTE_ACCESS_DENIED("ROUTE_ACCESS_DENIED", "Access denied to route", HttpStatus.FORBIDDEN),
     ROUTE_UPDATE_FAILED("ROUTE_UPDATE_FAILED", "OptimizationRoute update failed", HttpStatus.INTERNAL_SERVER_ERROR),

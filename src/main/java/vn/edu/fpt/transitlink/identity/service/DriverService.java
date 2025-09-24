@@ -1,6 +1,7 @@
 package vn.edu.fpt.transitlink.identity.service;
 
 import vn.edu.fpt.transitlink.identity.dto.DriverDTO;
+import vn.edu.fpt.transitlink.identity.dto.DriverInfo;
 import vn.edu.fpt.transitlink.identity.request.CreateDriverRequest;
 import vn.edu.fpt.transitlink.identity.request.UpdateDriverRequest;
 
@@ -14,6 +15,8 @@ public interface DriverService {
     DriverDTO updateDriver(UUID id, UpdateDriverRequest request);
     DriverDTO deleteDriver(UUID deleteId, UUID deletedBy);
     DriverDTO restoreDriver(UUID id);
+
+    DriverInfo getDriverInfoById(UUID driverId);
 
     // List and paginate drivers
     List<DriverDTO> getDrivers(int page, int size);

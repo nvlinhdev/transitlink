@@ -30,6 +30,7 @@ public class DataInitializer {
         initializeManager();
         initializeTicketSeller();
         initializeDispatcher();
+        initializeDriver();
     }
 
     private void initializeRoles() {
@@ -149,6 +150,32 @@ public class DataInitializer {
             dispatcher.getRoles().add(dispatcherRole);
             accountRepository.save(dispatcher);
             System.out.println("Dispatcher user created: dispatcher@example.com / dispatcher123");
+        }
+    }
+
+    private void initializeDriver() {
+        // Kiểm tra xem đã có người dùng nào với role DRIVER chưa
+        if (accountRepository.existsByRoleName(RoleName.DRIVER)) {
+            System.out.println("Driver users already exist. Skipping driver initialization.");
+            return;
+        }
+
+        if (!accountRepository.existsByEmail("driver@example.com")) {
+            Account driver = new Account();
+            driver.setEmail("driver@example.com");
+            driver.setPassword(passwordEncoder.encode("driver123"));
+            driver.setFirstName("Driver");
+            driver.setLastName("User");
+            driver.setEmailVerified(true);
+            driver.setProfileCompleted(true);
+            // Khởi tạo roles để tránh NullPointerException
+            driver.setRoles(new HashSet<>());
+            // Gán role DRIVER
+            Role driverRole = roleRepository.findByName(RoleName.DRIVER)
+                    .orElseThrow(() -> new RuntimeException("Driver role not found"));
+            driver.getRoles().add(driverRole);
+            accountRepository.save(driver);
+            System.out.println("Driver user created: driver@example.com / driver123");
         }
     }
 }

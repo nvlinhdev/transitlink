@@ -13,6 +13,7 @@ public interface AccountService {
     AccountDTO createAccount(CreateAccountRequest dto);
 
     AccountDTO getAccountById(UUID id);
+    List<AccountDTO> getAccountsByIds(List<UUID> accountIds);
 
     AccountDTO updateAccount(UUID id, UpdateAccountRequest dto);
 
@@ -45,4 +46,5 @@ public interface AccountService {
 
     //    List<AccountDTO> importAccounts(List<ImportAccountRequest> importRequests);
     ImportAccountResultDTO importAccounts(List<ImportAccountRequest> importRequests);
+
 }

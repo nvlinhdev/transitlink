@@ -100,6 +100,12 @@ public class AccountServiceImpl implements AccountService {
         return accountMapper.toDTO(acc);
     }
 
+    @Override
+    public List<AccountDTO> getAccountsByIds(List<UUID> accountIds) {
+        List<Account> accounts = accountRepository.findAllById(accountIds);
+        return accounts.stream().map(accountMapper::toDTO).toList();
+    }
+
     @Caching(
             put = {@CachePut(value = "accountsById", key = "#id")},
             evict = {@CacheEvict(value = "accountsPage", allEntries = true)}

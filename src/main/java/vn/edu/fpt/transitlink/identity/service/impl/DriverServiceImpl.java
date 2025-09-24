@@ -13,6 +13,7 @@ import vn.edu.fpt.transitlink.fleet.dto.DepotDTO;
 import vn.edu.fpt.transitlink.fleet.service.DepotService;
 import vn.edu.fpt.transitlink.identity.dto.AccountDTO;
 import vn.edu.fpt.transitlink.identity.dto.DriverDTO;
+import vn.edu.fpt.transitlink.identity.dto.DriverInfo;
 import vn.edu.fpt.transitlink.identity.entity.Driver;
 import vn.edu.fpt.transitlink.identity.enumeration.AuthErrorCode;
 import vn.edu.fpt.transitlink.identity.repository.DriverRepository;
@@ -142,6 +143,33 @@ public class DriverServiceImpl implements DriverService {
         accountService.restoreAccount(driver.getAccountId());
 
         return mapToDriverDTO(savedDriver);
+    }
+
+    @Override
+    public DriverInfo getDriverInfoById(UUID driverId) {
+        return driverRepository.findById(driverId)
+                .map(driver -> {
+                    AccountDTO account = null;
+                    if (driver.getAccountId() != null) {
+                        try {
+                            account = accountService.getAccountById(driver.getAccountId());
+                        } catch (Exception e) {
+                            // Account might be deleted or not found, handle gracefully
+                            account = null;
+                        }
+                    }
+                    return new DriverInfo(
+                            driver.getId(),
+                            account != null ? account.firstName() : null,
+                            account != null ? account.lastName() : null,
+                            account != null ? account.phoneNumber() : null,
+                            account != null ? account.email() : null,
+                            driver.getLicenseNumber(),
+                            driver.getLicenseClass(),
+                            account != null ? account.avatarUrl() : null
+                    );
+                })
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.DRIVER_NOT_FOUND));
     }
 
     @Cacheable(value = "driversPage", key = "'page:' + #page + ':size:' + #size")
