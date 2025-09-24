@@ -114,6 +114,7 @@ app:
       - /api/identity/auth/**
       - /api/identity/registration/**
       - /oauth2/**
+      - /ws/**
     cors:
       allowed-origins:
         - "http://localhost:4200"
@@ -121,6 +122,7 @@ app:
         - "https://transitlink.dpdns.org"
         - "http://api.transitlink.fpt.edu.vn"
         - "https://api.transitlink.dpdns.org"
+        - "http://localhost:3000"
       allowed-methods:
         - GET
         - POST

@@ -94,6 +94,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
     // mail sending support
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
@@ -119,6 +120,7 @@ dependencies {
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
     // Mapbox geoJson
     implementation("com.mapbox.mapboxsdk:mapbox-sdk-geojson:5.8.0")
+    implementation("com.mapbox.mapboxsdk:mapbox-sdk-turf:5.8.0")
     // https://mvnrepository.com/artifact/com.google.http-client/google-http-client-jackson2
     implementation("com.google.http-client:google-http-client-jackson2:2.0.0")
     // PostgreSQL

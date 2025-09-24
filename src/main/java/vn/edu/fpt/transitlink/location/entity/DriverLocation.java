@@ -3,10 +3,9 @@ package vn.edu.fpt.transitlink.location.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.*;
-import vn.edu.fpt.transitlink.shared.base.BaseSoftDeletableEntity;
 
-import java.awt.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -14,20 +13,14 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @Setter
-@Builder
-@ToString
-@EqualsAndHashCode(callSuper = true)
 @Entity
-public class DriverLocation extends BaseSoftDeletableEntity {
+@Table(name = "driver_locations")
+public class DriverLocation {
     @Id
     @GeneratedValue
-    private UUID Id;
+    private UUID id;
     private UUID driverId;
     private OffsetDateTime recordAt;
-    private Point location;
-    private Float speedKmH;
-    private Float headingDeg;
-    private String status;
-
-
+    private Double latitude;
+    private Double longitude;
 }
