@@ -15,5 +15,4 @@ public interface RouteService {
     void publishRoute(UUID routeId);
     List<DriverRouteSummaryDTO> getAllDriverRouteByDriverId(UUID driverRouteId);
     DriverRouteDetailDTO getDriverRouteById(UUID routeId);
-
 }

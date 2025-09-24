@@ -18,6 +18,8 @@ import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
 import vn.edu.fpt.transitlink.trip.dto.ImportJourneyResultDTO;
 import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
+import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDetailForPassengerDTO;
+import vn.edu.fpt.transitlink.trip.dto.PassengerJourneySummaryDTO;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
 import vn.edu.fpt.transitlink.trip.request.CreatePassengerJourneyRequest;
 import vn.edu.fpt.transitlink.trip.request.ImportPassengerJourneyRequest;
@@ -93,9 +95,9 @@ public class PassengerJourneyController {
     // ==================== LIST OPERATIONS (TICKET_SELLER) ====================
 
     @Operation(summary = "Get all passenger journeys (paginated)",
-            description = "Get paginated list of all passenger journeys (TICKET_SELLER only)")
+            description = "Get paginated list of all passenger journeys")
     @GetMapping
-    @PreAuthorize("hasRole('TICKET_SELLER')")
+    @PreAuthorize("hasAnyRole('TICKET_SELLER', 'DISPATCHER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getPassengerJourneys(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -121,7 +123,7 @@ public class PassengerJourneyController {
     @Operation(summary = "Get unscheduled journeys",
             description = "Get journeys that haven't been scheduled yet (TICKET_SELLER only)")
     @GetMapping("/unscheduled")
-    @PreAuthorize("hasRole('TICKET_SELLER')")
+    @PreAuthorize("hasAnyRole('TICKET_SELLER', 'DISPATCHER')")
     public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getUnscheduledJourneys(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -206,14 +208,24 @@ public class PassengerJourneyController {
             description = "Get current passenger's active journeys (PASSENGER only)")
     @GetMapping("/me")
     @PreAuthorize("hasRole('PASSENGER')")
-    public ResponseEntity<PaginatedResponse<PassengerJourneyDTO>> getCurrentPassengerJourneys(
+    public ResponseEntity<PaginatedResponse<PassengerJourneySummaryDTO>> getCurrentPassengerJourneys(
             @AuthenticationPrincipal CustomUserPrincipal principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        List<PassengerJourneyDTO> myJourneys = passengerJourneyService.getCurrentPassengerJourneys(principal.getId(), page, size);
+        List<PassengerJourneySummaryDTO> myJourneys = passengerJourneyService.getCurrentPassengerJourneys(principal.getId(), page, size);
         long total = passengerJourneyService.countJourneysByPassenger(principal.getId());
-        PaginatedResponse<PassengerJourneyDTO> response = new PaginatedResponse<>(myJourneys, page, size, total);
+        PaginatedResponse<PassengerJourneySummaryDTO> response = new PaginatedResponse<>(myJourneys, page, size, total);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get current user's journey details",
+            description = "Get detailed information about a specific journey (PASSENGER only)")
+    @GetMapping("/me/{journeyId}")
+    @PreAuthorize("hasRole('PASSENGER')")
+    public ResponseEntity<StandardResponse<PassengerJourneyDetailForPassengerDTO>> getMyJourneyDetail(
+            @PathVariable UUID journeyId) {
+        PassengerJourneyDetailForPassengerDTO journeyDetail = passengerJourneyService.getPassengerJourneyDetail(journeyId);
+        return ResponseEntity.ok(StandardResponse.success(journeyDetail));
     }
 
     @Operation(summary = "Get current user's completed journeys",

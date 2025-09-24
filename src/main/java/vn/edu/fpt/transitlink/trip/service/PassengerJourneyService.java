@@ -3,6 +3,8 @@ package vn.edu.fpt.transitlink.trip.service;
 import org.springframework.web.multipart.MultipartFile;
 import vn.edu.fpt.transitlink.trip.dto.ImportJourneyResultDTO;
 import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
+import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDetailForPassengerDTO;
+import vn.edu.fpt.transitlink.trip.dto.PassengerJourneySummaryDTO;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
 import vn.edu.fpt.transitlink.trip.request.CreatePassengerJourneyRequest;
 import vn.edu.fpt.transitlink.trip.request.ImportPassengerJourneyRequest;
@@ -41,10 +43,11 @@ public interface PassengerJourneyService {
     List<PassengerJourneyDTO> getJourneysForMonth(int year, int month, int page, int size);
 
     // Passenger-specific operations
-    List<PassengerJourneyDTO> getCurrentPassengerJourneys(UUID passengerId, int page, int size);
-    List<PassengerJourneyDTO> getPassengerCompletedJourneys(UUID passengerId, int page, int size);
-    List<PassengerJourneyDTO> getPassengerCancelledJourneys(UUID passengerId, int page, int size);
-    List<PassengerJourneyDTO> getPassengerJourneyHistory(UUID passengerId, int page, int size);
+    List<PassengerJourneySummaryDTO> getCurrentPassengerJourneys(UUID accountId, int page, int size);
+    PassengerJourneyDetailForPassengerDTO getPassengerJourneyDetail(UUID journeyId);
+    List<PassengerJourneyDTO> getPassengerCompletedJourneys(UUID accountId, int page, int size);
+    List<PassengerJourneyDTO> getPassengerCancelledJourneys(UUID accountId, int page, int size);
+    List<PassengerJourneyDTO> getPassengerJourneyHistory(UUID accountId, int page, int size);
 
     // Search operations
     List<PassengerJourneyDTO> searchPassengerJourneys(SearchPassengerJourneyRequest request, int page, int size);
@@ -54,7 +57,6 @@ public interface PassengerJourneyService {
     ImportJourneyResultDTO importPassengerJourneysFromExcel(MultipartFile file, ImportPassengerJourneyRequest request);
 
     // OptimizationRoute service integration methods
-    PassengerJourneyDTO assignRoute(UUID journeyId, UUID routeId);
     PassengerJourneyDTO updateJourneyStatus(UUID journeyId, JourneyStatus status);
     PassengerJourneyDTO setActualPickupTime(UUID journeyId, OffsetDateTime pickupTime);
     PassengerJourneyDTO setActualDropoffTime(UUID journeyId, OffsetDateTime dropoffTime);

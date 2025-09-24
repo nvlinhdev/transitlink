@@ -41,7 +41,19 @@ public interface PassengerJourneyRepository extends SoftDeletableRepository<Pass
     // Find by passenger
     Page<PassengerJourney> findByPassengerId(UUID passengerId, Pageable pageable);
     Page<PassengerJourney> findByPassengerIdAndStatus(UUID passengerId, JourneyStatus status, Pageable pageable);
-    Page<PassengerJourney> findByPassengerIdAndStatusIn(UUID passengerId, List<JourneyStatus> statuses, Pageable pageable);
+    @Query("""
+    SELECT pj
+    FROM PassengerJourney pj
+    JOIN Passenger p ON pj.passengerId = p.id
+    WHERE p.accountId = :accountId
+      AND pj.status IN :statuses
+    """)
+    Page<PassengerJourney> findByAccountIdAndStatuses(
+            @Param("accountId") UUID accountId,
+            @Param("statuses") List<JourneyStatus> statuses,
+            Pageable pageable);
+
+
     long countByPassengerId(UUID passengerId);
 
     // Find by date range

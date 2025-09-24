@@ -24,6 +24,8 @@ import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 import vn.edu.fpt.transitlink.shared.util.ExcelFileUtils;
 import vn.edu.fpt.transitlink.trip.dto.ImportJourneyResultDTO;
 import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
+import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDetailForPassengerDTO;
+import vn.edu.fpt.transitlink.trip.dto.PassengerJourneySummaryDTO;
 import vn.edu.fpt.transitlink.trip.entity.PassengerJourney;
 import vn.edu.fpt.transitlink.trip.entity.PassengerJourneyDocument;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
@@ -298,7 +300,7 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
     }
 
     @Override
-    public List<PassengerJourneyDTO> getCurrentPassengerJourneys(UUID passengerId, int page, int size) {
+    public List<PassengerJourneySummaryDTO> getCurrentPassengerJourneys(UUID accountId, int page, int size) {
         List<JourneyStatus> currentStatuses = Arrays.asList(
                 JourneyStatus.NOT_SCHEDULED,
                 JourneyStatus.SCHEDULED,
@@ -306,11 +308,43 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
         );
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<PassengerJourney> journeyPage = passengerJourneyRepository.findByPassengerIdAndStatusIn(passengerId, currentStatuses, pageable);
+        Page<PassengerJourney> journeyPage = passengerJourneyRepository.findByAccountIdAndStatuses(accountId, currentStatuses, pageable);
 
         return journeyPage.getContent().stream()
-                .map(this::mapToDTO)
+                .map(journey -> new PassengerJourneySummaryDTO(
+                        journey.getId(),
+                        placeService.getPlace(journey.getPickupPlaceId()).name(),
+                        placeService.getPlace(journey.getDropoffPlaceId()).name(),
+                        journey.getMainStopArrivalTime(),
+                        journey.getSeatCount(),
+                        journey.getJourneyType(),
+                        journey.getPlannedPickupTime(),
+                        journey.getPlannedDropoffTime(),
+                        journey.getStatus()
+                ))
                 .toList();
+    }
+
+    @Override
+    public PassengerJourneyDetailForPassengerDTO getPassengerJourneyDetail(UUID journeyId) {
+        PassengerJourney journey = passengerJourneyRepository.findById(journeyId)
+                .orElseThrow(() -> new BusinessException(TripErrorCode.PASSENGER_JOURNEY_NOT_FOUND));
+
+        PlaceDTO pickupPlace = placeService.getPlace(journey.getPickupPlaceId());
+        PlaceDTO dropoffPlace = placeService.getPlace(journey.getDropoffPlaceId());
+
+        return new PassengerJourneyDetailForPassengerDTO(
+                journey.getId(),
+                pickupPlace,
+                dropoffPlace,
+                journey.getMainStopArrivalTime(),
+                journey.getSeatCount(),
+                journey.getJourneyType(),
+                journey.getGeometry(),
+                journey.getPlannedPickupTime(),
+                journey.getPlannedDropoffTime(),
+                journey.getStatus()
+        );
     }
 
     @Override
@@ -717,24 +751,6 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
         return value != null ? value.toString() : null;
     }
 
-    @Override
-    @Transactional
-    public PassengerJourneyDTO assignRoute(UUID journeyId, UUID routeId) {
-        PassengerJourney journey = passengerJourneyRepository.findById(journeyId)
-                .orElseThrow(() -> new BusinessException(TripErrorCode.PASSENGER_JOURNEY_NOT_FOUND));
-
-        journey.setStatus(JourneyStatus.SCHEDULED);
-
-        PassengerJourney savedJourney = passengerJourneyRepository.save(journey);
-
-        // Update Elasticsearch
-        PassengerDTO passenger = passengerService.getPassengerById(savedJourney.getPassengerId());
-        PlaceDTO pickupPlace = placeService.getPlace(savedJourney.getPickupPlaceId());
-        PlaceDTO dropoffPlace = placeService.getPlace(savedJourney.getDropoffPlaceId());
-        indexToElasticsearch(savedJourney, passenger, pickupPlace, dropoffPlace);
-
-        return mapToDTO(savedJourney, passenger, pickupPlace, dropoffPlace);
-    }
 
     @Override
     @Transactional
