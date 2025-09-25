@@ -20,7 +20,7 @@ public class PassengerLocation {
     @GeneratedValue
     private UUID id;
     private UUID passengerId;
-    private OffsetDateTime recordAt;
     private Double latitude;
     private Double longitude;
+    private OffsetDateTime recordAt;
 }

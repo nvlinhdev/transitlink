@@ -1,13 +1,12 @@
 package vn.edu.fpt.transitlink.location.dto;
 
-import java.awt.*;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public record PassengerLocationDTO(
-         UUID passengerLocationId,
-         UUID passengerId,
-         Point location,
-         int recordAt,
-         String status
+        UUID passengerId,
+        Double latitude,
+        Double longitude,
+        OffsetDateTime recordAt
 ) {
 }

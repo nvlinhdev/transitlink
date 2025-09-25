@@ -20,7 +20,7 @@ public class DriverLocation {
     @GeneratedValue
     private UUID id;
     private UUID driverId;
-    private OffsetDateTime recordAt;
     private Double latitude;
     private Double longitude;
+    private OffsetDateTime recordAt;
 }
