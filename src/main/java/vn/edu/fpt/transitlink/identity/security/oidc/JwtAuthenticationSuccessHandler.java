@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 import vn.edu.fpt.transitlink.identity.entity.RefreshToken;
 import vn.edu.fpt.transitlink.identity.security.CookieUtils;
-import vn.edu.fpt.transitlink.identity.security.JwtService;
+import vn.edu.fpt.transitlink.shared.security.JwtService;
 import vn.edu.fpt.transitlink.identity.service.RefreshTokenService;
 import vn.edu.fpt.transitlink.shared.config.AppProperties;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;

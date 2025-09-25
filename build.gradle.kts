@@ -123,6 +123,10 @@ dependencies {
     implementation("com.mapbox.mapboxsdk:mapbox-sdk-turf:5.8.0")
     // https://mvnrepository.com/artifact/com.google.http-client/google-http-client-jackson2
     implementation("com.google.http-client:google-http-client-jackson2:2.0.0")
+    // https://mvnrepository.com/artifact/com.google.firebase/firebase-admin
+    implementation("com.google.firebase:firebase-admin:9.6.0")
+    // https://mvnrepository.com/artifact/com.vladmihalcea/hibernate-types-60
+    implementation("com.vladmihalcea:hibernate-types-60:2.21.1")
     // PostgreSQL
     runtimeOnly("org.postgresql:postgresql")
     // Devtools

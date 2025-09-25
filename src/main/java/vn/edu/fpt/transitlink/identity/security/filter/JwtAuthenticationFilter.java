@@ -11,7 +11,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import vn.edu.fpt.transitlink.identity.security.userdetails.CustomUserDetailsService;
-import vn.edu.fpt.transitlink.identity.security.JwtService;
+import vn.edu.fpt.transitlink.shared.security.JwtService;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
 
 import java.io.IOException;

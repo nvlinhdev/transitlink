@@ -173,6 +173,8 @@ springdoc:
       description: Production server
 
   groups:
+    - group: notification
+      paths: /api/notifications/**
     - group: identity
       paths: /api/identity/**
     - group: location

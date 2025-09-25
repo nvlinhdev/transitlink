@@ -1,4 +1,4 @@
-package vn.edu.fpt.transitlink.identity.security;
+package vn.edu.fpt.transitlink.shared.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -9,7 +9,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import vn.edu.fpt.transitlink.shared.config.AppProperties;
-import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
 
 import javax.crypto.SecretKey;
 import java.security.Key;

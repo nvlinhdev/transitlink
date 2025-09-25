@@ -18,7 +18,7 @@ import vn.edu.fpt.transitlink.identity.enumeration.AuthErrorCode;
 import vn.edu.fpt.transitlink.identity.mapper.RoleMapper;
 import vn.edu.fpt.transitlink.identity.repository.AccountRepository;
 import vn.edu.fpt.transitlink.identity.security.userdetails.CustomUserDetailsService;
-import vn.edu.fpt.transitlink.identity.security.JwtService;
+import vn.edu.fpt.transitlink.shared.security.JwtService;
 import vn.edu.fpt.transitlink.identity.service.*;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;

@@ -7,7 +7,7 @@ import vn.edu.fpt.transitlink.identity.entity.Account;
 import vn.edu.fpt.transitlink.identity.entity.RefreshToken;
 import vn.edu.fpt.transitlink.identity.enumeration.AuthErrorCode;
 import vn.edu.fpt.transitlink.identity.repository.RefreshTokenRepository;
-import vn.edu.fpt.transitlink.identity.security.JwtService;
+import vn.edu.fpt.transitlink.shared.security.JwtService;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
 import vn.edu.fpt.transitlink.identity.service.RefreshTokenService;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
