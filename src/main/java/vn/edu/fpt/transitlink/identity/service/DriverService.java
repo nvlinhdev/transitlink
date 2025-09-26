@@ -17,6 +17,7 @@ public interface DriverService {
     DriverDTO restoreDriver(UUID id);
 
     DriverInfo getDriverInfoById(UUID driverId);
+    List<DriverInfo> getDriverInfosByIds(List<UUID> driverIds);
 
     // List and paginate drivers
     List<DriverDTO> getDrivers(int page, int size);

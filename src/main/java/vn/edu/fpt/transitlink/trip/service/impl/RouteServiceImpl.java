@@ -137,7 +137,6 @@ public class RouteServiceImpl implements RouteService {
                                                     passengerJourneyDTO.getPlannedDropoffTime(),
                                                     null,
                                                     JourneyStatus.SCHEDULED
-
                                             );
                                             PassengerJourneyDTO updatedJourney = passengerJourneyService.updatePassengerJourney(passengerOnStopData.getPassengerJourneyId(),
                                                     updateRequest);
@@ -168,6 +167,7 @@ public class RouteServiceImpl implements RouteService {
                             routeData.estimatedDistanceKm(),
                             routeData.estimatedDurationMin(),
                             routeData.status(),
+                            null,
                             vehicleDTO
                     );
                 }).toList();
@@ -192,6 +192,18 @@ public class RouteServiceImpl implements RouteService {
         Map<UUID, VehicleDTO> vehicleMap = vehicleService.getAllVehiclesByIds(vehicleIds).stream()
                 .collect(Collectors.toMap(VehicleDTO::id, v -> v));
 
+        // Load driver information
+        List<UUID> driverIds = routes.stream()
+                .map(Route::getDriverId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        final Map<UUID, DriverInfo> driverMap = driverIds.isEmpty() ? Collections.emptyMap() :
+                driverService.getDriverInfosByIds(driverIds).stream()
+                        .collect(Collectors.toMap(DriverInfo::id, d -> d));
+
+
         return routes.stream()
                 .map(route ->
                         new RouteSummaryDTO(
@@ -201,6 +213,7 @@ public class RouteServiceImpl implements RouteService {
                                 route.getEstimatedDistanceKm(),
                                 route.getEstimatedDurationMin(),
                                 route.getStatus(),
+                                driverMap.get(route.getDriverId()),
                                 vehicleMap.get(route.getVehicleId())
                         )
                 ).toList();
@@ -244,6 +257,7 @@ public class RouteServiceImpl implements RouteService {
                 throw new BusinessException(TripErrorCode.DRIVER_HAS_OVERLAPPING_ROUTE);
             }
             //assign driver
+            route.setStatus(RouteStatus.ASSIGNED);
             route.setDriverId(driverId);
             routeRepository.save(route);
         });

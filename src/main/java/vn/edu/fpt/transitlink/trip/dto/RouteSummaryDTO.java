@@ -1,6 +1,7 @@
 package vn.edu.fpt.transitlink.trip.dto;
 
 import vn.edu.fpt.transitlink.fleet.dto.VehicleDTO;
+import vn.edu.fpt.transitlink.identity.dto.DriverInfo;
 import vn.edu.fpt.transitlink.trip.enumeration.RouteStatus;
 
 import java.time.OffsetDateTime;
@@ -13,6 +14,7 @@ public record RouteSummaryDTO(
         double distance,
         double duration,
         RouteStatus status,
+        DriverInfo driverInfo,
         VehicleDTO vehicleDTO
 ) {
 }

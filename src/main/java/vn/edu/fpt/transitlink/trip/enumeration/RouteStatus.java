@@ -1,10 +1,10 @@
 package vn.edu.fpt.transitlink.trip.enumeration;
 
 public enum RouteStatus {
-    SCHEDULED,
+    PLANNED,
+    ASSIGNED,
     PUBLISHED,
     ONGOING,
     COMPLETED,
-    PLANNED,
     CANCELED
 }

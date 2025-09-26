@@ -23,6 +23,7 @@ import vn.edu.fpt.transitlink.identity.service.AccountService;
 import vn.edu.fpt.transitlink.identity.service.DriverService;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -170,6 +171,38 @@ public class DriverServiceImpl implements DriverService {
                     );
                 })
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.DRIVER_NOT_FOUND));
+    }
+
+    @Override
+    public List<DriverInfo> getDriverInfosByIds(List<UUID> driverIds) {
+        if (driverIds == null || driverIds.isEmpty()) {
+            return List.of();
+        }
+
+        return driverRepository.findAllByIdIn(driverIds)
+                .stream()
+                .map(driver -> {
+                    AccountDTO account = null;
+                    if (driver.getAccountId() != null) {
+                        try {
+                            account = accountService.getAccountById(driver.getAccountId());
+                        } catch (Exception e) {
+                            // Account might be deleted or not found, handle gracefully
+                            account = null;
+                        }
+                    }
+                    return new DriverInfo(
+                            driver.getId(),
+                            account != null ? account.firstName() : null,
+                            account != null ? account.lastName() : null,
+                            account != null ? account.phoneNumber() : null,
+                            account != null ? account.email() : null,
+                            driver.getLicenseNumber(),
+                            driver.getLicenseClass(),
+                            account != null ? account.avatarUrl() : null
+                    );
+                })
+                .toList();
     }
 
     @Cacheable(value = "driversPage", key = "'page:' + #page + ':size:' + #size")
