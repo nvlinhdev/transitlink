@@ -270,8 +270,8 @@ public class RouteServiceImpl implements RouteService {
             if (route.getDriverId() == null) {
                 throw new BusinessException(TripErrorCode.ROUTE_UPDATE_FAILED, "Cannot publish route without assigned driver");
             }
-            // Chỉ publish những route có trạng thái PLANNED
-            if (route.getStatus() != RouteStatus.PLANNED) {
+            // Chỉ publish những route có trạng thái ASSIGNED
+            if (route.getStatus() != RouteStatus.ASSIGNED) {
                 throw new BusinessException(TripErrorCode.ROUTE_UPDATE_FAILED, "Only routes with status PLANNED can be published");
             }
             route.setStatus(RouteStatus.PUBLISHED);
