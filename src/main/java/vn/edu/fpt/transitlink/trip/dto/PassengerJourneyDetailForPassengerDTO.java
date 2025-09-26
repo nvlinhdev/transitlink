@@ -1,5 +1,6 @@
 package vn.edu.fpt.transitlink.trip.dto;
 
+import vn.edu.fpt.transitlink.identity.dto.DriverInfo;
 import vn.edu.fpt.transitlink.location.dto.PlaceDTO;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyType;
@@ -11,6 +12,7 @@ public record PassengerJourneyDetailForPassengerDTO(
         UUID id,
         PlaceDTO pickupPlace,
         PlaceDTO dropoffPlace,
+        DriverInfo driverInfo,
         OffsetDateTime mainStopArrivalTime,
         Integer seatCount,
         JourneyType journeyType,

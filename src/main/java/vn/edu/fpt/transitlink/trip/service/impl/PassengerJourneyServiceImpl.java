@@ -12,11 +12,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import vn.edu.fpt.transitlink.identity.dto.DriverInfo;
 import vn.edu.fpt.transitlink.identity.dto.ImportPassengerResultDTO;
 import vn.edu.fpt.transitlink.identity.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.identity.enumeration.RoleName;
 import vn.edu.fpt.transitlink.identity.request.ImportAccountRequest;
 import vn.edu.fpt.transitlink.identity.request.ImportPassengerRequest;
+import vn.edu.fpt.transitlink.identity.service.DriverService;
 import vn.edu.fpt.transitlink.identity.service.PassengerService;
 import vn.edu.fpt.transitlink.location.dto.ImportPlaceResultDTO;
 import vn.edu.fpt.transitlink.location.dto.PlaceDTO;
@@ -53,6 +55,7 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
     private final PassengerJourneyESRepository passengerJourneyESRepository;
     private final PlaceService placeService;
     private final PassengerService passengerService;
+    private final DriverService driverService;
 
     @Override
     @Transactional
@@ -333,10 +336,18 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
         PlaceDTO pickupPlace = placeService.getPlace(journey.getPickupPlaceId());
         PlaceDTO dropoffPlace = placeService.getPlace(journey.getDropoffPlaceId());
 
+        DriverInfo driverInfo = null;
+        UUID driverId = passengerJourneyRepository.findDriverIdByJourneyId(journeyId);
+
+        if (driverId != null) {
+            driverInfo = driverService.getDriverInfoById(driverId);
+        }
+
         return new PassengerJourneyDetailForPassengerDTO(
                 journey.getId(),
                 pickupPlace,
                 dropoffPlace,
+                driverInfo,
                 journey.getMainStopArrivalTime(),
                 journey.getSeatCount(),
                 journey.getJourneyType(),

@@ -70,4 +70,13 @@ public interface PassengerJourneyRepository extends SoftDeletableRepository<Pass
             """)
     Optional<PassengerJourney> findByIdWithStops(@Param("id") UUID id);
 
+    @Query("""
+                SELECT DISTINCT r.driverId
+                FROM PassengerJourney j
+                JOIN j.stopJourneyMappings sjm
+                JOIN sjm.stop s
+                JOIN s.route r
+                WHERE j.id = :journeyId
+            """)
+    UUID findDriverIdByJourneyId(@Param("journeyId") UUID journeyId);
 }
