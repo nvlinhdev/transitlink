@@ -20,7 +20,7 @@ import java.util.UUID;
 public class Route extends BaseSoftDeletableEntity {
     @Id
     @GeneratedValue(strategy =  GenerationType.UUID)
-    private UUID Id;
+    private UUID id;
     private UUID driverId;
     private UUID vehicleId;
     private Double estimatedDistanceKm;

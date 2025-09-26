@@ -16,6 +16,9 @@ import vn.edu.fpt.transitlink.identity.dto.DriverInfo;
 import vn.edu.fpt.transitlink.identity.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.identity.service.DriverService;
 import vn.edu.fpt.transitlink.identity.service.PassengerService;
+import vn.edu.fpt.transitlink.notification.dto.NotificationDTO;
+import vn.edu.fpt.transitlink.notification.request.CreateNotificationRequest;
+import vn.edu.fpt.transitlink.notification.service.NotificationService;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 import vn.edu.fpt.transitlink.trip.dto.*;
 import vn.edu.fpt.transitlink.trip.entity.PassengerJourney;
@@ -54,6 +57,7 @@ public class RouteServiceImpl implements RouteService {
     private final VehicleService vehicleService;
     private final PassengerService passengerService;
     private final DriverService driverService;
+    private final NotificationService notificationService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -258,9 +262,30 @@ public class RouteServiceImpl implements RouteService {
             }
             route.setStatus(RouteStatus.PUBLISHED);
             routeRepository.save(route);
+            // Gửi notification cho lái xe
+            CreateNotificationRequest request = new CreateNotificationRequest();
+            request.setTitle("Có một chuyến đi mới đã được giao");
+            request.setContent("Bạn có một chuyến đi mới đã được giao. Vui lòng kiểm tra và chuẩn bị cho chuyến đi.");
+            request.setAccountIds(List.of(route.getDriverId()));
+            NotificationDTO notificationDTO = notificationService.createNotification(request);
+
+            notificationService.sendNotificationToMobile(notificationDTO.getId());
+            // Gửi notification cho hành khách
+            List<UUID> passengerIds = route.getStops().stream()
+                    .flatMap(stop -> stop.getStopJourneyMappings().stream())
+                    .map(m -> m.getPassengerJourney().getPassengerId())
+                    .distinct()
+                    .toList();
+            DriverInfo driverInfo = driverService.getDriverInfoById(route.getDriverId());
+            VehicleDTO vehicleDTO = vehicleService.getVehicle(route.getVehicleId());
+            String vehicleInfo = vehicleDTO.licensePlate() + " - " + vehicleDTO.name();
+            CreateNotificationRequest passengerNotificationRequest = new CreateNotificationRequest();
+            passengerNotificationRequest.setTitle("Chuyến đi của bạn đã được xác nhận");
+            passengerNotificationRequest.setContent("Chuyến đi của bạn đã được xác nhận. Tài xế: " + driverInfo.firstName() + " " + driverInfo.lastName() + ", Phương tiện: " + vehicleInfo + ". Vui lòng chuẩn bị đúng giờ.");
+            passengerNotificationRequest.setAccountIds(passengerIds);
+            NotificationDTO passengerNotificationDTO = notificationService.createNotification(passengerNotificationRequest);
+            notificationService.sendNotificationToMobile(passengerNotificationDTO.getId());
         });
-        // Todo: Gửi notification cho lái xe
-        // Todo: Gửi notification cho hành khách
     }
 
     @Override
@@ -380,8 +405,26 @@ public class RouteServiceImpl implements RouteService {
         route.setStatus(RouteStatus.ONGOING);
         routeRepository.save(route);
 
-        //TODO: Gửi notification cho hành khách và điều phối viên
+        // Gửi notification cho hành khách và điều phối viên
+        CreateNotificationRequest createPassengerNotificationRequest = new CreateNotificationRequest();
+        createPassengerNotificationRequest.setTitle("Chuyến đi đã bắt đầu");
+        createPassengerNotificationRequest.setContent("Chuyến đi của bạn đã bắt đầu. Vui lòng chuẩn bị.");
+        List<UUID> passengerIds = route.getStops().stream()
+                .flatMap(stop -> stop.getStopJourneyMappings().stream())
+                .map(m -> m.getPassengerJourney().getPassengerId())
+                .distinct()
+                .toList();
+        createPassengerNotificationRequest.setAccountIds(passengerIds);
+        NotificationDTO notificationDTO = notificationService.createNotification(createPassengerNotificationRequest);
+        notificationService.sendNotificationToMobile(notificationDTO.getId());
 
+        CreateNotificationRequest createDispatcherNotificationRequest = new CreateNotificationRequest();
+        createDispatcherNotificationRequest.setTitle("Chuyến đi đã bắt đầu");
+        createDispatcherNotificationRequest.setContent("Chuyến đi đã bắt đầu.");
+        List<UUID> dispatcherIds = List.of(routeRepository.findCreatedByById(request.routeId()));
+        createDispatcherNotificationRequest.setAccountIds(dispatcherIds);
+        NotificationDTO dispatcherNotificationDTO = notificationService.createNotification(createDispatcherNotificationRequest);
+        notificationService.sendNotificationToWeb(dispatcherNotificationDTO.getId());
 
         return new RouteStatusData(RouteStatus.ONGOING);
     }
@@ -417,7 +460,13 @@ public class RouteServiceImpl implements RouteService {
 
         routeRepository.save(route);
 
-        // Todo: Gửi notification cho điều phối viên
+        CreateNotificationRequest createDispatcherNotificationRequest = new CreateNotificationRequest();
+        createDispatcherNotificationRequest.setTitle("Chuyến đi đã hoàn thành");
+        createDispatcherNotificationRequest.setContent("Chuyến đi " + route.getId() + " đã hoàn thành.");
+        List<UUID> dispatcherIds = List.of(routeRepository.findCreatedByById(request.routeId()));
+        createDispatcherNotificationRequest.setAccountIds(dispatcherIds);
+        NotificationDTO dispatcherNotificationDTO = notificationService.createNotification(createDispatcherNotificationRequest);
+        notificationService.sendNotificationToWeb(dispatcherNotificationDTO.getId());
 
         return new RouteStatusData(RouteStatus.COMPLETED);
     }
@@ -441,7 +490,7 @@ public class RouteServiceImpl implements RouteService {
                 .collect(Collectors.toMap(PassengerDTO::id, p -> p));
 
         // 3. Dựng StopDTO + PassengerOnStopDTO
-        return  stops.stream()
+        return stops.stream()
                 .map(stop -> {
                     List<PassengerOnStopDTO> passengerOnStopDTOS = stop.getStopJourneyMappings().stream()
                             .map(stopJourneyMapping -> {

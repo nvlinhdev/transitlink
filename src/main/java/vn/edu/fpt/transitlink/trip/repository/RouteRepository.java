@@ -31,6 +31,9 @@ public interface RouteRepository extends SoftDeletableRepository<Route, UUID> {
             @Param("end") OffsetDateTime end
     );
 
+    @Query("SELECT r.createdBy FROM Route r WHERE r.id = :id")
+    UUID findCreatedByById(@Param("id") UUID id);
+
 
     Long countByCreatedByAndIsDeletedFalse(UUID createdUserId);
 
