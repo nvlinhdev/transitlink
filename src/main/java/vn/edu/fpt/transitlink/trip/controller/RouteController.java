@@ -12,11 +12,12 @@ import vn.edu.fpt.transitlink.shared.dto.PaginatedResponse;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
 import vn.edu.fpt.transitlink.trip.dto.*;
 import vn.edu.fpt.transitlink.trip.request.AssignDriverRequest;
+import vn.edu.fpt.transitlink.trip.request.CheckInRequest;
+import vn.edu.fpt.transitlink.trip.request.CheckOutRequest;
 import vn.edu.fpt.transitlink.trip.request.OptimizationRouteRequest;
 import vn.edu.fpt.transitlink.trip.service.RouteService;
 import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 
-import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 
@@ -70,15 +71,29 @@ public class RouteController {
 
     @PreAuthorize("hasRole('DRIVER')")
     @GetMapping("/driver-routes")
-    public ResponseEntity<List<DriverRouteSummaryDTO>> getAllDriverRouteByDriverId(UUID driverId) {
+    public ResponseEntity<StandardResponse<List<DriverRouteSummaryDTO>>> getAllDriverRouteByDriverId(UUID driverId) {
         List<DriverRouteSummaryDTO> driverRouteSummaries = routeService.getAllDriverRouteByDriverId(driverId);
-        return ResponseEntity.ok(driverRouteSummaries);
+        return ResponseEntity.ok(StandardResponse.success(driverRouteSummaries));
     }
 
     @PreAuthorize("hasRole('DRIVER')")
     @GetMapping("/driver-routes/{routeId}")
-    public ResponseEntity<DriverRouteDetailDTO> getDriverRouteById(@PathVariable UUID routeId) {
+    public ResponseEntity<StandardResponse<DriverRouteDetailDTO>> getDriverRouteById(@PathVariable UUID routeId) {
         DriverRouteDetailDTO driverRouteDetail = routeService.getDriverRouteById(routeId);
-        return ResponseEntity.ok(driverRouteDetail);
+        return ResponseEntity.ok(StandardResponse.success(driverRouteDetail));
+    }
+
+    @PreAuthorize("hasRole('DRIVER')")
+    @PatchMapping("/check-in")
+    public ResponseEntity<StandardResponse<RouteStatusData>> checkIn(@Valid @RequestBody CheckInRequest request) {
+        RouteStatusData statusData = routeService.checkIn(request);
+        return ResponseEntity.ok(StandardResponse.success(statusData));
+    }
+
+    @PreAuthorize("hasRole('DRIVER')")
+    @PatchMapping("/check-out")
+    public ResponseEntity<StandardResponse<RouteStatusData>> checkOut(@Valid @RequestBody CheckOutRequest request) {
+        RouteStatusData statusData = routeService.checkOut(request);
+        return ResponseEntity.ok(StandardResponse.success(statusData));
     }
 }

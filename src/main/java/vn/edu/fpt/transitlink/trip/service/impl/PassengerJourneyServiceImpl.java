@@ -1,7 +1,10 @@
 package vn.edu.fpt.transitlink.trip.service.impl;
 
+import com.mapbox.geojson.Point;
+import com.mapbox.turf.TurfMeasurement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.formula.functions.T;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,21 +25,18 @@ import vn.edu.fpt.transitlink.location.service.PlaceService;
 import vn.edu.fpt.transitlink.shared.dto.ImportErrorDTO;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
 import vn.edu.fpt.transitlink.shared.util.ExcelFileUtils;
-import vn.edu.fpt.transitlink.trip.dto.ImportJourneyResultDTO;
-import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
-import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDetailForPassengerDTO;
-import vn.edu.fpt.transitlink.trip.dto.PassengerJourneySummaryDTO;
+import vn.edu.fpt.transitlink.trip.dto.*;
 import vn.edu.fpt.transitlink.trip.entity.PassengerJourney;
 import vn.edu.fpt.transitlink.trip.entity.PassengerJourneyDocument;
+import vn.edu.fpt.transitlink.trip.entity.Stop;
+import vn.edu.fpt.transitlink.trip.entity.StopJourneyMapping;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyType;
+import vn.edu.fpt.transitlink.trip.enumeration.StopAction;
 import vn.edu.fpt.transitlink.trip.exception.TripErrorCode;
 import vn.edu.fpt.transitlink.trip.repository.PassengerJourneyESRepository;
 import vn.edu.fpt.transitlink.trip.repository.PassengerJourneyRepository;
-import vn.edu.fpt.transitlink.trip.request.CreatePassengerJourneyRequest;
-import vn.edu.fpt.transitlink.trip.request.ImportPassengerJourneyRequest;
-import vn.edu.fpt.transitlink.trip.request.SearchPassengerJourneyRequest;
-import vn.edu.fpt.transitlink.trip.request.UpdatePassengerJourneyRequest;
+import vn.edu.fpt.transitlink.trip.request.*;
 import vn.edu.fpt.transitlink.trip.service.PassengerJourneyService;
 
 import java.io.File;
@@ -817,6 +817,73 @@ public class PassengerJourneyServiceImpl implements PassengerJourneyService {
     @Override
     public long countJourneysByPassenger(UUID passengerId) {
         return passengerJourneyRepository.countByPassengerId(passengerId);
+    }
+
+    @Transactional
+    @Override
+    public JourneyStatusData confirmPickup(ConfirmPickupRequest request) {
+        PassengerJourney journey = passengerJourneyRepository.findByIdWithStops(request.passengerJourneyId())
+                .orElseThrow(() -> new BusinessException(TripErrorCode.PASSENGER_JOURNEY_NOT_FOUND));
+
+        if (journey.getStatus() != JourneyStatus.SCHEDULED) {
+            throw new BusinessException(TripErrorCode.PASSENGER_JOURNEY_STATUS_INVALID);
+        }
+
+        // Lấy Stop mà hành động là PICKUP
+        Stop pickupStop = journey.getStopJourneyMappings().stream()
+                .filter(m -> m.getAction() == StopAction.PICKUP)
+                .map(StopJourneyMapping::getStop)
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(TripErrorCode.PASSENGER_JOURNEY_NO_STOPS_FOUND));
+
+        Point stopPoint = Point.fromLngLat(pickupStop.getLongitude(), pickupStop.getLatitude());
+        Point passengerPoint = Point.fromLngLat(request.longitude(), request.latitude());
+        double distance = TurfMeasurement.distance(stopPoint, passengerPoint, "meters");
+
+        if (distance > 50) {
+            throw new BusinessException(TripErrorCode.PASSENGER_JOURNEY_PICKUP_TOO_FAR);
+        }
+
+        journey.setActualPickupTime(OffsetDateTime.now());
+        journey.setStatus(JourneyStatus.IN_PROGRESS);
+        passengerJourneyRepository.save(journey);
+
+        return new JourneyStatusData(JourneyStatus.IN_PROGRESS);
+    }
+
+    @Transactional
+    @Override
+    public JourneyStatusData confirmDropoff(ConfirmDropoffRequest request) {
+        PassengerJourney journey = passengerJourneyRepository.findByIdWithStops(request.passengerJourneyId())
+                .orElseThrow(() -> new BusinessException(TripErrorCode.PASSENGER_JOURNEY_NOT_FOUND));
+
+        if (journey.getStatus() != JourneyStatus.IN_PROGRESS) {
+            throw new BusinessException(TripErrorCode.PASSENGER_JOURNEY_STATUS_INVALID);
+        }
+
+        // Lấy Stop mà hành động là DROPOFF
+        Stop dropoffStop = journey.getStopJourneyMappings().stream()
+                .filter(m -> m.getAction() == StopAction.DROPOFF)
+                .map(StopJourneyMapping::getStop)
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(TripErrorCode.PASSENGER_JOURNEY_NO_STOPS_FOUND));
+
+        Point stopPoint = Point.fromLngLat(dropoffStop.getLongitude(), dropoffStop.getLatitude());
+        Point passengerPoint = Point.fromLngLat(request.longitude(), request.latitude());
+        double distance = TurfMeasurement.distance(stopPoint, passengerPoint, "meters");
+
+        if (distance > 50) {
+            throw new BusinessException(TripErrorCode.PASSENGER_JOURNEY_DROPOFF_TOO_FAR);
+        }
+
+        journey.setActualDropoffTime(OffsetDateTime.now());
+        journey.setStatus(JourneyStatus.COMPLETED);
+        passengerJourneyRepository.save(journey);
+
+        // Cập nhật số chuyến hoàn thành cho hành khách
+        passengerService.incrementCompletedTrips(journey.getPassengerId());
+
+        return new JourneyStatusData(JourneyStatus.COMPLETED);
     }
 
     // Helper methods

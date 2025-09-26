@@ -1,5 +1,7 @@
 package vn.edu.fpt.transitlink.trip.service.impl;
 
+import com.mapbox.geojson.Point;
+import com.mapbox.turf.TurfMeasurement;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
@@ -26,6 +28,8 @@ import vn.edu.fpt.transitlink.trip.enumeration.RouteType;
 import vn.edu.fpt.transitlink.trip.exception.TripErrorCode;
 import vn.edu.fpt.transitlink.trip.mapper.RouteMapper;
 import vn.edu.fpt.transitlink.trip.repository.RouteRepository;
+import vn.edu.fpt.transitlink.trip.request.CheckInRequest;
+import vn.edu.fpt.transitlink.trip.request.CheckOutRequest;
 import vn.edu.fpt.transitlink.trip.request.OptimizationRouteRequest;
 import vn.edu.fpt.transitlink.trip.request.UpdatePassengerJourneyRequest;
 import vn.edu.fpt.transitlink.trip.service.PassengerJourneyService;
@@ -33,6 +37,8 @@ import vn.edu.fpt.transitlink.trip.service.RouteService;
 import vn.edu.fpt.transitlink.trip.spi.RouteOptimizationProvider;
 import vn.edu.fpt.transitlink.trip.spi.dto.OptimizationResult;
 
+import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -157,6 +163,7 @@ public class RouteServiceImpl implements RouteService {
                             routeData.plannedArrivalTime(),
                             routeData.estimatedDistanceKm(),
                             routeData.estimatedDurationMin(),
+                            routeData.status(),
                             vehicleDTO
                     );
                 }).toList();
@@ -189,6 +196,7 @@ public class RouteServiceImpl implements RouteService {
                                 route.getPlannedArrivalTime(),
                                 route.getEstimatedDistanceKm(),
                                 route.getEstimatedDurationMin(),
+                                route.getStatus(),
                                 vehicleMap.get(route.getVehicleId())
                         )
                 ).toList();
@@ -256,8 +264,8 @@ public class RouteServiceImpl implements RouteService {
     }
 
     @Override
-    public List<DriverRouteSummaryDTO> getAllDriverRouteByDriverId(UUID driverRouteId) {
-        List<Route> routes = routeRepository.findAllByDriverId(driverRouteId);
+    public List<DriverRouteSummaryDTO> getAllDriverRouteByDriverId(UUID driverId) {
+        List<Route> routes = routeRepository.findAllByDriverId(driverId);
 
         return routes.stream()
                 .map(route -> new DriverRouteSummaryDTO(
@@ -266,6 +274,7 @@ public class RouteServiceImpl implements RouteService {
                         route.getEstimatedDurationMin(),
                         route.getPlannedDepartureTime(),
                         route.getPlannedArrivalTime(),
+                        route.getStatus(),
                         route.getType()
                 ))
                 .toList();
@@ -334,8 +343,83 @@ public class RouteServiceImpl implements RouteService {
                 route.getGeometry(),
                 route.getDirectionUrl(),
                 route.getType(),
+                route.getStatus(),
                 stops
         );
+    }
+
+    @Transactional
+    @Override
+    public RouteStatusData checkIn(CheckInRequest request) {
+        Route route = routeRepository.findById(request.routeId())
+                .orElseThrow(() -> new BusinessException(TripErrorCode.ROUTE_NOT_FOUND));
+
+        if (!(route.getStatus() == RouteStatus.PUBLISHED)) {
+            throw new BusinessException(TripErrorCode.ROUTE_STATUS_INVALID_FOR_CHECKIN);
+        }
+
+        if (route.getPlannedDepartureTime() != null &&
+                Math.abs(Duration.between(OffsetDateTime.now(), route.getPlannedDepartureTime()).toMinutes()) > 15) {
+            throw new BusinessException(TripErrorCode.ROUTE_CHECKIN_TIME_WINDOW_VIOLATED);
+        }
+
+        // Lấy Stop đầu tiên
+        Stop firstStop = route.getStops().stream()
+                .min((s1, s2) -> Integer.compare(s1.getSequence(), s2.getSequence()))
+                .orElseThrow(() -> new BusinessException(TripErrorCode.ROUTE_HAS_NO_STOPS));
+
+        Point stopPoint = Point.fromLngLat(firstStop.getLongitude(), firstStop.getLatitude());
+        Point driverPoint = Point.fromLngLat(request.longitude(), request.latitude());
+        double distance = TurfMeasurement.distance(stopPoint, driverPoint, "meters");
+
+        if (distance > 50) { // giới hạn 50m
+            throw new BusinessException(TripErrorCode.ROUTE_CHECKIN_LOCATION_VIOLATED);
+        }
+
+        route.setCheckinTime(OffsetDateTime.now());
+        route.setStatus(RouteStatus.ONGOING);
+        routeRepository.save(route);
+
+        //TODO: Gửi notification cho hành khách và điều phối viên
+
+
+        return new RouteStatusData(RouteStatus.ONGOING);
+    }
+
+    @Transactional
+    @Override
+    public RouteStatusData checkOut(CheckOutRequest request) {
+        Route route = routeRepository.findById(request.routeId())
+                .orElseThrow(() -> new BusinessException(TripErrorCode.ROUTE_NOT_FOUND));
+
+        // Kiểm tra trạng thái route
+        if (route.getStatus() != RouteStatus.ONGOING) {
+            throw new BusinessException(TripErrorCode.ROUTE_STATUS_INVALID_FOR_CHECKOUT);
+        }
+
+        // Lấy Stop cuối cùng
+        Stop lastStop = route.getStops().stream()
+                .max((s1, s2) -> Integer.compare(s1.getSequence(), s2.getSequence()))
+                .orElseThrow(() -> new BusinessException(TripErrorCode.ROUTE_HAS_NO_STOPS));
+
+        // So sánh vị trí tài xế với stop cuối
+        Point stopPoint = Point.fromLngLat(lastStop.getLongitude(), lastStop.getLatitude());
+        Point driverPoint = Point.fromLngLat(request.longitude(), request.latitude());
+        double distance = TurfMeasurement.distance(stopPoint, driverPoint, "meters");
+
+        if (distance > 50) { // ngưỡng khoảng cách cho phép
+            throw new BusinessException(TripErrorCode.ROUTE_CHECKOUT_LOCATION_VIOLATED);
+        }
+
+        // Ghi thời gian checkout và cập nhật trạng thái
+        route.setCheckoutTime(OffsetDateTime.now());
+        route.setStatus(RouteStatus.COMPLETED);
+
+        routeRepository.save(route);
+
+        // Todo: Gửi notification cho điều phối viên
+
+        return new RouteStatusData(RouteStatus.COMPLETED);
     }
 
     private List<StopDTO> mapStops(List<Stop> stops) {

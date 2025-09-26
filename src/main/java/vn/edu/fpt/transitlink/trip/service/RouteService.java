@@ -1,6 +1,8 @@
 package vn.edu.fpt.transitlink.trip.service;
 
 import vn.edu.fpt.transitlink.trip.dto.*;
+import vn.edu.fpt.transitlink.trip.request.CheckInRequest;
+import vn.edu.fpt.transitlink.trip.request.CheckOutRequest;
 import vn.edu.fpt.transitlink.trip.request.OptimizationRouteRequest;
 
 import java.util.List;
@@ -13,6 +15,8 @@ public interface RouteService {
     RouteDetailDTO getRoute(UUID routeId);
     void assignDriverToRoute(UUID driverId, UUID routeId);
     void publishRoute(UUID routeId);
-    List<DriverRouteSummaryDTO> getAllDriverRouteByDriverId(UUID driverRouteId);
+    List<DriverRouteSummaryDTO> getAllDriverRouteByDriverId(UUID driverId);
     DriverRouteDetailDTO getDriverRouteById(UUID routeId);
+    RouteStatusData checkIn(CheckInRequest request);
+    RouteStatusData checkOut(CheckOutRequest request);
 }

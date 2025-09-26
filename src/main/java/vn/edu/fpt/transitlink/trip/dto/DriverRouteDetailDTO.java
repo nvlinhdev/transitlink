@@ -1,6 +1,7 @@
 package vn.edu.fpt.transitlink.trip.dto;
 
 import vn.edu.fpt.transitlink.fleet.dto.VehicleDTO;
+import vn.edu.fpt.transitlink.trip.enumeration.RouteStatus;
 import vn.edu.fpt.transitlink.trip.enumeration.RouteType;
 
 import java.time.OffsetDateTime;
@@ -17,6 +18,7 @@ public record DriverRouteDetailDTO(
         String geometry,
         String directionUrl,
         RouteType type,
+        RouteStatus status,
         List<StopDTO> stops
 ) {
 }

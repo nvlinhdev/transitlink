@@ -5,5 +5,6 @@ public enum RouteStatus {
     PUBLISHED,
     ONGOING,
     COMPLETED,
-    PLANNED, CANCELED
+    PLANNED,
+    CANCELED
 }

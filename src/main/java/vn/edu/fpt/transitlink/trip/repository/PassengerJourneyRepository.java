@@ -36,18 +36,21 @@ public interface PassengerJourneyRepository extends SoftDeletableRepository<Pass
 
     // Find by status
     Page<PassengerJourney> findByStatus(JourneyStatus status, Pageable pageable);
+
     long countByStatus(JourneyStatus status);
 
     // Find by passenger
     Page<PassengerJourney> findByPassengerId(UUID passengerId, Pageable pageable);
+
     Page<PassengerJourney> findByPassengerIdAndStatus(UUID passengerId, JourneyStatus status, Pageable pageable);
+
     @Query("""
-    SELECT pj
-    FROM PassengerJourney pj
-    JOIN Passenger p ON pj.passengerId = p.id
-    WHERE p.accountId = :accountId
-      AND pj.status IN :statuses
-    """)
+            SELECT pj
+            FROM PassengerJourney pj
+            JOIN Passenger p ON pj.passengerId = p.id
+            WHERE p.accountId = :accountId
+              AND pj.status IN :statuses
+            """)
     Page<PassengerJourney> findByAccountIdAndStatuses(
             @Param("accountId") UUID accountId,
             @Param("statuses") List<JourneyStatus> statuses,
@@ -59,6 +62,12 @@ public interface PassengerJourneyRepository extends SoftDeletableRepository<Pass
     // Find by date range
     Page<PassengerJourney> findByMainStopArrivalTimeBetween(OffsetDateTime startDate, OffsetDateTime endDate, Pageable pageable);
 
-    // Find by pickup or dropoff place
-    Page<PassengerJourney> findByPickupPlaceIdOrDropoffPlaceId(UUID pickupPlaceId, UUID dropoffPlaceId, Pageable pageable);
+    @Query("""
+                SELECT pj FROM PassengerJourney pj
+                JOIN FETCH pj.stopJourneyMappings sjm
+                JOIN FETCH sjm.stop
+                WHERE pj.id = :id
+            """)
+    Optional<PassengerJourney> findByIdWithStops(@Param("id") UUID id);
+
 }

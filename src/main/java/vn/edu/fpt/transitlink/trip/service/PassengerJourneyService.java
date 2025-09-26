@@ -1,15 +1,9 @@
 package vn.edu.fpt.transitlink.trip.service;
 
 import org.springframework.web.multipart.MultipartFile;
-import vn.edu.fpt.transitlink.trip.dto.ImportJourneyResultDTO;
-import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
-import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDetailForPassengerDTO;
-import vn.edu.fpt.transitlink.trip.dto.PassengerJourneySummaryDTO;
+import vn.edu.fpt.transitlink.trip.dto.*;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
-import vn.edu.fpt.transitlink.trip.request.CreatePassengerJourneyRequest;
-import vn.edu.fpt.transitlink.trip.request.ImportPassengerJourneyRequest;
-import vn.edu.fpt.transitlink.trip.request.SearchPassengerJourneyRequest;
-import vn.edu.fpt.transitlink.trip.request.UpdatePassengerJourneyRequest;
+import vn.edu.fpt.transitlink.trip.request.*;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -63,4 +57,7 @@ public interface PassengerJourneyService {
     // Statistics
     long countJourneysByStatus(JourneyStatus status);
     long countJourneysByPassenger(UUID passengerId);
+
+    JourneyStatusData confirmPickup(ConfirmPickupRequest request);
+    JourneyStatusData confirmDropoff(ConfirmDropoffRequest request);
 }

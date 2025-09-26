@@ -1,4 +1,5 @@
 package vn.edu.fpt.transitlink.trip.dto;
+import vn.edu.fpt.transitlink.trip.enumeration.RouteStatus;
 import vn.edu.fpt.transitlink.trip.enumeration.RouteType;
 
 import java.time.OffsetDateTime;
@@ -10,6 +11,7 @@ public record DriverRouteSummaryDTO(
         Double estimatedDurationMin,
         OffsetDateTime plannedDepartureTime,
         OffsetDateTime plannedArrivalTime,
+        RouteStatus routeStatus,
         RouteType type
 ) {
 }

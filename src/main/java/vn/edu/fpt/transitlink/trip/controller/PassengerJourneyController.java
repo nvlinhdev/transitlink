@@ -16,15 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.edu.fpt.transitlink.shared.dto.PaginatedResponse;
 import vn.edu.fpt.transitlink.shared.dto.StandardResponse;
 import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
-import vn.edu.fpt.transitlink.trip.dto.ImportJourneyResultDTO;
-import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDTO;
-import vn.edu.fpt.transitlink.trip.dto.PassengerJourneyDetailForPassengerDTO;
-import vn.edu.fpt.transitlink.trip.dto.PassengerJourneySummaryDTO;
+import vn.edu.fpt.transitlink.trip.dto.*;
 import vn.edu.fpt.transitlink.trip.enumeration.JourneyStatus;
-import vn.edu.fpt.transitlink.trip.request.CreatePassengerJourneyRequest;
-import vn.edu.fpt.transitlink.trip.request.ImportPassengerJourneyRequest;
-import vn.edu.fpt.transitlink.trip.request.SearchPassengerJourneyRequest;
-import vn.edu.fpt.transitlink.trip.request.UpdatePassengerJourneyRequest;
+import vn.edu.fpt.transitlink.trip.request.*;
 import vn.edu.fpt.transitlink.trip.service.PassengerJourneyService;
 
 import jakarta.validation.Valid;
@@ -266,6 +260,21 @@ public class PassengerJourneyController {
         PaginatedResponse<PassengerJourneyDTO> response = new PaginatedResponse<>(historyJourneys, page, size, historyJourneys.size());
         return ResponseEntity.ok(response);
     }
+
+    @PreAuthorize("hasRole('PASSENGER')")
+    @PatchMapping("/confirm-pickup")
+    public ResponseEntity<StandardResponse<JourneyStatusData>> confirmPickup(@Valid @RequestBody ConfirmPickupRequest request) {
+        JourneyStatusData statusData = passengerJourneyService.confirmPickup(request);
+        return ResponseEntity.ok(StandardResponse.success("Pickup confirmed successfully", statusData));
+    }
+
+    @PreAuthorize("hasRole('PASSENGER')")
+    @PatchMapping("/confirm-dropoff")
+    public ResponseEntity<StandardResponse<JourneyStatusData>> confirmDropoff(@Valid @RequestBody ConfirmDropoffRequest request) {
+        JourneyStatusData statusData = passengerJourneyService.confirmDropoff(request);
+        return ResponseEntity.ok(StandardResponse.success("Drop-off confirmed successfully", statusData));
+    }
+
 
     // ==================== SEARCH OPERATIONS ====================
 
