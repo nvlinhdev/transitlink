@@ -23,12 +23,12 @@ public class NotificationTokenServiceImpl implements NotificationTokenService {
     private final NotificationTokenMapper mapper;
 
     @Override
-    public NotificationTokenDTO registerToken(RegisterTokenRequest request) {
+    public NotificationTokenDTO registerToken(UUID accountId, RegisterTokenRequest request) {
         // Kiểm tra xem token đã tồn tại chưa
         return notificationTokenRepository.findByToken(request.getToken())
                 .map(existing -> {
                     // Nếu đã có thì update lại account + platform + status
-                    existing.setAccountId(request.getAccountId());
+                    existing.setAccountId(accountId);
                     existing.setPlatform(request.getPlatform());
                     existing.setStatus(NotificationTokenStatus.ACTIVE);
                     return mapper.toDTO(notificationTokenRepository.save(existing));
@@ -36,7 +36,7 @@ public class NotificationTokenServiceImpl implements NotificationTokenService {
                 .orElseGet(() -> {
                     // Nếu chưa có thì tạo mới
                     NotificationToken nt = new NotificationToken();
-                    nt.setAccountId(request.getAccountId());
+                    nt.setAccountId(accountId);
                     nt.setToken(request.getToken());
                     nt.setPlatform(request.getPlatform());
                     nt.setStatus(NotificationTokenStatus.ACTIVE);

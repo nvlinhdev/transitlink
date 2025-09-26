@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface NotificationTokenService {
 
-    NotificationTokenDTO registerToken(RegisterTokenRequest request);
+    NotificationTokenDTO registerToken(UUID accountId, RegisterTokenRequest request);
 
     void deactivateToken(String token);
 

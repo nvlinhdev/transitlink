@@ -9,9 +9,6 @@ import java.util.UUID;
 
 @Data
 public class RegisterTokenRequest {
-    @NotNull
-    private UUID accountId;
-
     @NotBlank
     private String token;
 

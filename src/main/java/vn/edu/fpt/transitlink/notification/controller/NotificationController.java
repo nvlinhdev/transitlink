@@ -71,9 +71,10 @@ public class NotificationController {
 
     @PostMapping("/tokens")
     public ResponseEntity<StandardResponse<NotificationTokenDTO>> registerToken(
-            @Valid @RequestBody RegisterTokenRequest request
+            @Valid @RequestBody RegisterTokenRequest request,
+            @AuthenticationPrincipal CustomUserPrincipal customUserPrincipal
     ) {
-        NotificationTokenDTO saved = tokenService.registerToken(request);
+        NotificationTokenDTO saved = tokenService.registerToken(customUserPrincipal.getId(), request);
         return ResponseEntity.ok(StandardResponse.success(saved));
     }
 
