@@ -16,5 +16,7 @@ public class NotificationDTO {
     private String topic;
     private String status;
     private OffsetDateTime sentAt;
+    private Boolean read;
+    private OffsetDateTime readAt;
 }
 

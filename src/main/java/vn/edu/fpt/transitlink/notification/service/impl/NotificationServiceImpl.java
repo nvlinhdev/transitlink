@@ -175,7 +175,12 @@ public class NotificationServiceImpl implements NotificationService {
         var notificationAccounts = notificationAccountRepository.findAllByAccountId(accountId, pageable);
 
         return notificationAccounts.stream()
-                .map(na -> mapper.toDTO(na.getNotification()))
+                .map(notificationAccount -> {
+                    NotificationDTO dto = mapper.toDTO(notificationAccount.getNotification());
+                    dto.setRead(notificationAccount.getRead());
+                    dto.setReadAt(notificationAccount.getReadAt());
+                    return dto;
+                })
                 .toList();
     }
 
