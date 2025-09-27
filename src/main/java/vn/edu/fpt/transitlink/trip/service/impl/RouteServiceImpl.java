@@ -17,6 +17,7 @@ import vn.edu.fpt.transitlink.identity.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.identity.service.DriverService;
 import vn.edu.fpt.transitlink.identity.service.PassengerService;
 import vn.edu.fpt.transitlink.notification.dto.NotificationDTO;
+import vn.edu.fpt.transitlink.notification.enumeration.NotificationPriority;
 import vn.edu.fpt.transitlink.notification.request.CreateNotificationRequest;
 import vn.edu.fpt.transitlink.notification.service.NotificationService;
 import vn.edu.fpt.transitlink.shared.exception.BusinessException;
@@ -280,6 +281,7 @@ public class RouteServiceImpl implements RouteService {
             CreateNotificationRequest request = new CreateNotificationRequest();
             request.setTitle("Có một chuyến đi mới đã được giao");
             request.setContent("Bạn có một chuyến đi mới đã được giao. Vui lòng kiểm tra và chuẩn bị cho chuyến đi.");
+            request.setPriority(NotificationPriority.HIGH);
             request.setAccountIds(List.of(route.getDriverId()));
             NotificationDTO notificationDTO = notificationService.createNotification(request);
 
@@ -296,6 +298,7 @@ public class RouteServiceImpl implements RouteService {
             CreateNotificationRequest passengerNotificationRequest = new CreateNotificationRequest();
             passengerNotificationRequest.setTitle("Chuyến đi của bạn đã được xác nhận");
             passengerNotificationRequest.setContent("Chuyến đi của bạn đã được xác nhận. Tài xế: " + driverInfo.firstName() + " " + driverInfo.lastName() + ", Phương tiện: " + vehicleInfo + ". Vui lòng chuẩn bị đúng giờ.");
+            passengerNotificationRequest.setPriority(NotificationPriority.HIGH);
             passengerNotificationRequest.setAccountIds(passengerIds);
             NotificationDTO passengerNotificationDTO = notificationService.createNotification(passengerNotificationRequest);
             notificationService.sendNotificationToMobile(passengerNotificationDTO.getId());
