@@ -6,7 +6,7 @@ spring:
     time-zone: UTC
 
   datasource:
-    url: jdbc:postgresql://${TRANSITLINK_DB_HOST}:${TRANSITLINK_DB_PORT}/${TRANSITLINK_DB_NAME}
+    url: jdbc:postgresql://${TRANSITLINK_DB_HOST:localhost}:${TRANSITLINK_DB_PORT:5432}/${TRANSITLINK_DB_NAME:transitlink}
     username: ${TRANSITLINK_DB_USER}
     password: ${TRANSITLINK_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -32,24 +32,53 @@ spring:
       hibernate.order_inserts: true
       hibernate.order_updates: true
 
+  elasticsearch:
+    uris: ${ELASTIC_SCHEMA:http}://${ELASTIC_HOST:localhost}:${ELASTIC_PORT:9200}
+    username: elastic
+    password: ${ELASTIC_PASSWORD}
+
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD}
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}
-          jwk-set-uri: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/certs
+  mail:
+    enabled: true
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USER}
+    password: ${SMTP_PASSWORD}
+    from: "transitlink.com@gmail.com"
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectionpoolsize: 10
+      mail.smtp.connectiontimeout: 5000
+
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
 
   servlet:
     multipart:
-      max-file-size: ${TRANSITLINK_MAX_FILE_SIZE:"50MB"}
-      max-request-size: ${TRANSITLINK_MAX_REQUEST_SIZE:"50MB"}
+      max-file-size: "50MB"
+      max-request-size: "50MB"
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
 management:
   endpoints:
     web:
@@ -62,31 +91,38 @@ management:
 
 logging:
   file:
-    name: ${TRANSITLINK_WORKING_DIR:"."}/logs/transitlink.log
+    name: ${TRANSITLINK_WORKING_DIR:C:/transitlink}/logs/transitlink.log
   logback:
     rollingpolicy:
-      max-file-size: ${TRANSITLINK_MAX_LOG_FILE_SIZE:10MB}
-      max-history: ${TRANSITLINK_MAX_LOG_HISTORY:7}
+      max-file-size: "10MB"
+      max-history: 7
 
 app:
   storage:
-    provider: ${TRANSITLINK_STORAGE_PROVIDER:"local"}
-    root-path: ${TRANSITLINK_WORKING_DIR:"."}/data
-    base-url: ${TRANSITLINK_SCHEMA}://${TRANSITLINK_DOMAIN}/files
+    provider: ${TRANSITLINK_STORAGE_PROVIDER:local}
+    root-path: ${TRANSITLINK_WORKING_DIR:C:/transitlink}/data
+    base-url: ${TRANSITLINK_SCHEMA:http}://${TRANSITLINK_DOMAIN:localhost:8888}/files
   security:
     permit-all:
       - /swagger-ui/**
       - /v3/api-docs/**
-      - /swagger-ui.html
+      - /auth-dashboard.html
       - /files/**
       - /actuator/health
       - /actuator/info
+      - /login/oauth2/**
+      - /api/identity/auth/**
+      - /api/identity/registration/**
+      - /oauth2/**
+      - /ws/**
     cors:
       allowed-origins:
         - "http://localhost:4200"
         - "http://localhost:8888"
+        - "https://transitlink.dpdns.org"
         - "http://api.transitlink.fpt.edu.vn"
-        - "https://api.transitlink.fpt.edu.vn"
+        - "https://api.transitlink.dpdns.org"
+        - "http://localhost:3000"
       allowed-methods:
         - GET
         - POST
@@ -96,6 +132,22 @@ app:
       allowed-headers:
         - "*"
       allow-credentials: true
+    jwt:
+      secret: ${JWT_SECRET}
+      access-token:
+        expiration: 900000 # 15 phút (ms)
+      refresh-token:
+        expiration: 604800000 # 7 ngày (ms)
+    oauth2:
+      redirect-uris:
+        - http://localhost:4200/oauth/callback
+    verification:
+      otp-expiration-minutes: 5
+    frontend:
+      base-url: "http://localhost:4200"
+
+mapbox:
+  access-token: ${MAPBOX_ACCESS_TOKEN}
 
 # SpringDoc configuration for API documentation
 springdoc:
@@ -104,11 +156,8 @@ springdoc:
 
   swagger-ui:
     enabled: true # change false to disable Swagger UI on production
-
-  # when api-doc and swagger-ui are disabled, all of these properties can be ignored
-    oauth:
-      client-id: web-app
-      use-pkce-with-authorization-code-grant: true
+    operations-sorter: method
+    tags-sorter: alpha
 
   info:
     title: TransitLink API
@@ -119,17 +168,20 @@ springdoc:
     - url: http://localhost:8888
       description: Local development server
     - url: http://api.transitlink.fpt.edu.vn
-      description: Containerized depvloyment server
-
-  oauth:
-    authorization-url: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/auth
-    token-url: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/token
-    refresh-url: ${KEYCLOAK_SCHEMA:"http"}://${KEYCLOAK_DOMAIN}/realms/${KEYCLOAK_REALM:"transitlink"}/protocol/openid-connect/token
-    scopes:
-      openid: OpenID scope
-      email: User email
-      offline_access: Offline access (refresh token)
+      description: Containerized deployment server
+    - url: https://api.transitlink.dpdns.org
+      description: Production server
 
   groups:
+    - group: notification
+      paths: /api/notifications/**
+    - group: identity
+      paths: /api/identity/**
+    - group: location
+      paths: /api/location/**
+    - group: fleet
+      paths: /api/fleet/**
+    - group: trip
+      paths: /api/trip/**
     - group: storage
       paths: /api/storage/**

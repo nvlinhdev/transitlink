@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thông báo từ TransitLink</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .header h1 {
+            color: #1a3c5e;
+            font-size: 26px;
+            margin: 0;
+        }
+        .content {
+            padding: 20px;
+            text-align: center;
+        }
+        .content p {
+            color: #333333;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #777777;
+        }
+        @media only screen and (max-width: 600px) {
+            .container {
+                width: 100%;
+                padding: 15px;
+            }
+            .header h1 {
+                font-size: 22px;
+            }
+            .button {
+                padding: 10px 25px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Thông báo từ TransitLink</h1>
+    </div>
+    <div class="content">
+        <p>Kính gửi <span th:text="${name}"></span>,</p>
+        <p th:utext="${message}"></p>
+        <p th:if="${actionUrl}">
+            <a th:href="${actionUrl}" class="button" th:text="${actionText}"></a>
+        </p>
+    </div>
+    <div class="footer">
+        <p>Nếu bạn không yêu cầu thông báo này, vui lòng bỏ qua email.</p>
+        <p>&copy; 2025 TransitLink</p>
+    </div>
+</div>
+</body>
+</html>

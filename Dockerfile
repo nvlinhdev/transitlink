@@ -6,7 +6,7 @@ RUN gradle clean build -x unitTest -x integrationTest --no-daemon
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /transitlink
 RUN addgroup -g 1000 transitlinkgroup && adduser -u 1000 -S transitlink -G transitlinkgroup \
-    && mkdir -p /transitlink/logs /transitlink/data /transitlink/config \
+    && mkdir -p /transitlink/logs /transitlink/data /transitlink/config /transitlink/secrets \
     && chown -R transitlink:transitlinkgroup /transitlink
 USER transitlink
 COPY --from=builder /app/build/libs/*.jar transitlink.jar

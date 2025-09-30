@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Dashboard</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+            border-bottom: none;
+            padding: 15px 20px;
+        }
+
+        .card-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        input, textarea {
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #495057);
+            border: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            border: none;
+        }
+
+        .token-display {
+            background: #2d3748;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            resize: none;
+        }
+
+        .token-countdown {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .countdown-time {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .countdown-expired {
+            background: linear-gradient(45deg, #dc3545, #c82333) !important;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .active-token-info {
+            background: #e3f2fd;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .active-token-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            color: #1976d2;
+        }
+
+        #activeTokenName {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .refresh-token-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .no-tokens {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .refresh-token-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            background: white;
+            transition: background-color 0.2s ease;
+        }
+
+        .refresh-token-item:last-child {
+            border-bottom: none;
+        }
+
+        .refresh-token-item:hover {
+            background: #f8f9fa;
+        }
+
+        .refresh-token-item.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .token-info {
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .token-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .token-preview {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            opacity: 0.7;
+            word-break: break-all;
+        }
+
+        .token-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        #log {
+            background: #2d3748;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            padding: 15px;
+            border-radius: 8px;
+            height: 200px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 992px) {
+            .card {
+                margin-bottom: 20px;
+            }
+        }
+
+        .input-group .btn {
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        .input-group-append {
+            display: flex;
+        }
+
+        .input-group .form-control {
+            height: 38px;  /* Đảm bảo chiều cao cố định cho input */
+        }
+
+        /* Fix cho vấn đề lệch chiều cao trong input-group */
+        .input-group {
+            align-items: stretch;
+        }
+
+        .input-group > .btn {
+            height: auto;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Auth Dashboard</h1>
+        <a href="/swagger-ui/index.html" class="btn btn-primary" target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-code me-1" viewBox="0 0 16 16">
+                <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                <path d="M8.646 6.646a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L10.293 9 8.646 7.354a.5.5 0 0 1 0-.708zm-1.292 0a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0 0 .708l2 2a.5.5 0 0 0 .708-.708L5.707 9l1.647-1.646a.5.5 0 0 0 0-.708z"/>
+            </svg>
+            Swagger UI
+        </a>
+
+        <div class="row g-4">
+            <!-- Access Token Section -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        🎫 Access Token
+                    </div>
+                    <div class="card-body">
+                        <div class="active-token-info">
+                            <div class="active-token-label">
+                                <span>🎯 Active Refresh Token:</span>
+                                <span id="activeTokenName">None selected</span>
+                            </div>
+                        </div>
+
+                        <div id="tokenCountdown" class="token-countdown" style="display: none;">
+                            <span>⏰ Token expires in:</span>
+                            <span class="countdown-time" id="countdownTime">--:--:--</span>
+                        </div>
+
+                        <textarea id="tokenDisplay" class="form-control token-display" rows="4" readonly placeholder="No access token available"></textarea>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <button id="copyTokenBtn" class="btn btn-primary">📋 Copy Token</button>
+                            <button id="refreshBtn" class="btn btn-secondary">🔄 Refresh</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login Section -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        🚪 Login
+                    </div>
+                    <div class="card-body">
+                        <!-- Regular Login -->
+                        <input type="text" id="email" class="form-control mb-3" placeholder="📧 Email" />
+                        <input type="password" id="password" class="form-control mb-3" placeholder="🔒 Password" />
+                        <button id="loginBtn" class="btn btn-primary w-100">Login</button>
+                        <div id="loginStatus" class="alert mt-3" style="display: none;"></div>
+                        
+                        <!-- Logout Section -->
+                        <div class="mt-4">
+                            <h5>Logout</h5>
+                            <button id="logoutBtn" class="btn btn-danger w-100">Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Google Login Section (Moved to separate card) -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <span>🔄 Google OAuth2 Login</span>
+                    </div>
+                    <div class="card-body">
+                        <h5>Login with Google</h5>
+
+                        <!-- Server & Redirect Configuration -->
+                        <div class="mb-3">
+                            <label for="serverUrl" class="form-label">Server URL</label>
+                            <select id="serverUrl" class="form-select">
+                                <option value="http://localhost:8888">localhost:8888</option>
+                                <option value="http://api.transitlink.fpt.edu.vn">api.transitlink.fpt.edu.vn</option>
+                                <option value="https://api.transitlink.dpdns.org">api.transitlink.dpdns.org</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">OAuth2 Path</label>
+                            <div class="alert alert-light p-2 mb-0" style="font-family: monospace;">/oauth2/authorization/google?redirect_uri=</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="redirectUri" class="form-label">Redirect URI</label>
+                            <input type="text" id="redirectUri" class="form-control" value="http://localhost:4200/oauth/callback" />
+                        </div>
+
+
+                        <!-- URL Preview -->
+                        <div class="mb-3">
+                            <label class="form-label">Full Authentication URL</label>
+                            <div class="alert alert-secondary p-2" style="font-size: 0.8rem; word-break: break-all; font-family: monospace;">
+                                <span id="fullUrlPreview">http://localhost:8888/oauth2/authorization/google?redirect_uri=http://localhost:4200/oauth/callback</span>
+                            </div>
+                        </div>
+                        
+                        <button id="googleLoginBtn" class="btn btn-danger w-100 d-flex align-items-center justify-content-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-google" viewBox="0 0 16 16">
+                                <path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.792 4.792 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.702 3.702 0 0 0 1.599-2.431H8v-3.08h7.545z"/>
+                            </svg>
+                            Login with Google
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Refresh Token Management -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        🔑 Refresh Token Management
+                    </div>
+                    <div class="card-body">
+                        <div class="input-group mb-3">
+                            <input type="text" id="refreshTokenInput" class="form-control" placeholder="🔑 Enter refresh token..." />
+                            <button id="addRefreshTokenBtn" class="btn btn-primary">➕ Add</button>
+                        </div>
+
+                        <div id="refreshTokenList" class="refresh-token-list">
+                            <div class="no-tokens">No refresh tokens available</div>
+                        </div>
+
+                        <div id="refreshTokenStatus" class="alert mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Section -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        📝 Activity Log
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="log"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const API_BASE = '/api/identity/auth';
+        let refreshInterval;
+        let countdownInterval;
+        let refreshTokens = JSON.parse(localStorage.getItem('refresh_tokens') || '[]');
+        let activeRefreshToken = localStorage.getItem('active_refresh_token') || null;
+
+        // Generate token name/ID
+        function generateTokenName(token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const exp = new Date(payload.exp * 1000);
+                const id = token.slice(-8);
+                return `Token-${id} (exp: ${exp.toLocaleDateString()})`;
+            } catch(e) {
+                return `Token-${token.slice(-8)}`;
+            }
+        }
+
+        // Save refresh tokens to localStorage
+        function saveRefreshTokens() {
+            localStorage.setItem('refresh_tokens', JSON.stringify(refreshTokens));
+            localStorage.setItem('active_refresh_token', activeRefreshToken);
+        }
+
+        // Add refresh token to list
+        function addRefreshToken(token) {
+            const existingIndex = refreshTokens.findIndex(t => t.token === token);
+            if (existingIndex !== -1) {
+                showStatus('refreshTokenStatus', 'Token already exists in list', 'danger');
+                return false;
+            }
+
+            const tokenData = {
+                id: Date.now().toString(),
+                token: token,
+                name: generateTokenName(token),
+                addedAt: new Date().toISOString()
+            };
+
+            refreshTokens.push(tokenData);
+            saveRefreshTokens();
+            renderRefreshTokenList();
+            return true;
+        }
+
+        // Remove refresh token from list
+        function removeRefreshToken(tokenId) {
+            const index = refreshTokens.findIndex(t => t.id === tokenId);
+            if (index === -1) return;
+
+            const wasActive = refreshTokens[index].token === activeRefreshToken;
+            refreshTokens.splice(index, 1);
+
+            if (wasActive) {
+                activeRefreshToken = null;
+                localStorage.removeItem('access_token');
+            }
+
+            saveRefreshTokens();
+            renderRefreshTokenList();
+            updateTokenInfo();
+            updateActiveTokenDisplay();
+
+            if (wasActive) {
+                log('🗑️ Active token removed - cleared access token');
+                showStatus('refreshTokenStatus', 'Active token removed', 'info');
+            }
+        }
+
+        // Set active refresh token
+        function setActiveRefreshToken(tokenId) {
+            const tokenData = refreshTokens.find(t => t.id === tokenId);
+            if (!tokenData) return;
+
+            activeRefreshToken = tokenData.token;
+            saveRefreshTokens();
+            renderRefreshTokenList();
+            updateActiveTokenDisplay();
+
+            log(`🎯 Active token set: ${tokenData.name}`);
+            showStatus('refreshTokenStatus', 'Active token updated', 'success');
+
+            // Try to get access token immediately
+            refreshAccessToken();
+        }
+
+        // Update active token display
+        function updateActiveTokenDisplay() {
+            const activeTokenNameEl = document.getElementById('activeTokenName');
+            if (!activeRefreshToken) {
+                activeTokenNameEl.textContent = 'None selected';
+                return;
+            }
+
+            const tokenData = refreshTokens.find(t => t.token === activeRefreshToken);
+            if (tokenData) {
+                activeTokenNameEl.textContent = tokenData.name;
+            } else {
+                activeTokenNameEl.textContent = 'Token not in list';
+            }
+        }
+
+        // Render refresh token list
+        function renderRefreshTokenList() {
+            const listContainer = document.getElementById('refreshTokenList');
+
+            if (refreshTokens.length === 0) {
+                listContainer.innerHTML = '<div class="no-tokens">No refresh tokens available</div>';
+                return;
+            }
+
+            const html = refreshTokens.map(tokenData => {
+                const isActive = tokenData.token === activeRefreshToken;
+                const preview = tokenData.token.slice(0, 20) + '...' + tokenData.token.slice(-10);
+
+                return `
+                    <div class="refresh-token-item ${isActive ? 'active' : ''}">
+                        <div class="token-info">
+                            <div class="token-name">${tokenData.name}</div>
+                            <div class="token-preview">${preview}</div>
+                        </div>
+                        <div class="token-actions">
+                            <button class="btn btn-sm ${isActive ? 'btn-light' : 'btn-primary'}" onclick="setActiveRefreshToken('${tokenData.id}')" ${isActive ? 'disabled' : ''}>
+                                ${isActive ? '✅ Active' : '🎯 Select'}
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="removeRefreshToken('${tokenData.id}')">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            listContainer.innerHTML = html;
+        }
+
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML = `<span style="color: #667eea">[${time}]</span> ${msg}<br>` + logDiv.innerHTML;
+        }
+
+        // Status helper
+        function showStatus(id, msg, type='info') {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.className = `alert alert-${type}`;
+            el.style.display = 'block';
+
+            // Hide after 5 seconds
+            setTimeout(() => {
+                el.style.display = 'none';
+            }, 5000);
+        }
+
+        // Decode JWT to get expiration time
+        function getTokenExp(token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                return payload.exp * 1000;
+            } catch(e) { return 0; }
+        }
+
+        // Format time countdown
+        function formatTime(seconds) {
+            if (seconds <= 0) return "EXPIRED";
+
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+
+            if (hours > 0) {
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // Update countdown display
+        function updateCountdown() {
+            const accessToken = localStorage.getItem('access_token');
+            const countdownDiv = document.getElementById('tokenCountdown');
+            const countdownTime = document.getElementById('countdownTime');
+
+            if (!accessToken) {
+                countdownDiv.style.display = 'none';
+                return;
+            }
+
+            const exp = getTokenExp(accessToken);
+            const remaining = Math.floor((exp - Date.now()) / 1000);
+
+            countdownDiv.style.display = 'flex';
+            countdownTime.textContent = formatTime(remaining);
+
+            // Add expired styling if token is expired
+            if (remaining <= 0) {
+                countdownDiv.classList.add('countdown-expired');
+                countdownTime.textContent = "EXPIRED";
+            } else {
+                countdownDiv.classList.remove('countdown-expired');
+            }
+        }
+
+        // Update token display
+        function updateTokenDisplay() {
+            const accessToken = localStorage.getItem('access_token');
+            const tokenArea = document.getElementById('tokenDisplay');
+
+            if (!accessToken) {
+                tokenArea.value = '';
+                tokenArea.placeholder = 'No access token available';
+            } else {
+                tokenArea.value = accessToken;
+                tokenArea.placeholder = '';
+            }
+        }
+
+        // Update all token info
+        function updateTokenInfo() {
+            updateTokenDisplay();
+            updateCountdown();
+        }
+
+        // Auto refresh token if <30s remaining
+        async function autoRefresh() {
+            const accessToken = localStorage.getItem('access_token');
+            if (!accessToken || !activeRefreshToken) return;
+
+            const remaining = getTokenExp(accessToken) - Date.now();
+            if (remaining < 30000) {
+                log('🔄 Access token almost expired → refreshing...');
+                await refreshAccessToken();
+            }
+        }
+
+        // Refresh token
+        async function refreshAccessToken() {
+            if (!activeRefreshToken) {
+                showStatus('refreshTokenStatus', 'No active refresh token selected', 'danger');
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/refresh`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({refreshToken: activeRefreshToken})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('access_token', data.data.accessToken);
+
+                    // Update active refresh token if it changed
+                    if (data.data.refreshToken !== activeRefreshToken) {
+                        // Remove old token from list and add new one
+                        const oldTokenData = refreshTokens.find(t => t.token === activeRefreshToken);
+                        if (oldTokenData) {
+                            removeRefreshToken(oldTokenData.id);
+                        }
+                        addRefreshToken(data.data.refreshToken);
+                        activeRefreshToken = data.data.refreshToken;
+                        saveRefreshTokens();
+                        renderRefreshTokenList();
+                        updateActiveTokenDisplay();
+                    }
+
+                    log('✅ Access token refreshed successfully');
+                    showStatus('refreshTokenStatus', 'Access token refreshed', 'success');
+                    updateTokenInfo();
+                } else {
+                    log('❌ Token refresh failed: ' + data.message);
+                    showStatus('refreshTokenStatus', 'Refresh failed: ' + data.message, 'danger');
+                }
+            } catch(e) {
+                log('❌ Token refresh error: ' + e.message);
+                showStatus('refreshTokenStatus', 'Refresh error', 'danger');
+                console.error(e);
+            }
+        }
+
+        // Login
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showStatus('loginStatus', 'Please enter email and password', 'danger');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({identifier: email, password})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('access_token', data.data.accessToken);
+
+                    // Add refresh token to list and set as active
+                    addRefreshToken(data.data.refreshToken);
+                    activeRefreshToken = data.data.refreshToken;
+                    saveRefreshTokens();
+                    renderRefreshTokenList();
+                    updateActiveTokenDisplay();
+
+                    showStatus('loginStatus', 'Login successful! 🎉', 'success');
+                    log(`✅ User logged in: ${email}`);
+                    updateTokenInfo();
+
+                    // Start intervals
+                    if (refreshInterval) clearInterval(refreshInterval);
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    refreshInterval = setInterval(autoRefresh, 10000); // check every 10s
+                    countdownInterval = setInterval(updateCountdown, 1000); // update countdown every second
+                } else {
+                    log('❌ Login failed: ' + data.message);
+                    showStatus('loginStatus', 'Login failed: ' + data.message, 'danger');
+                }
+            } catch(e) {
+                log('❌ Login error: ' + e.message);
+                showStatus('loginStatus', 'Login error', 'danger');
+                console.error(e);
+            }
+        });
+
+        // Google Login
+        document.getElementById('googleLoginBtn').addEventListener('click', () => {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const redirectUri = document.getElementById('redirectUri').value;
+            
+            if (!serverUrl || !redirectUri) {
+                showStatus('loginStatus', 'Please enter server URL and redirect URL', 'danger');
+                return;
+            }
+            
+            const googleAuthUrl = `${serverUrl}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
+            
+            // Lưu cấu hình hiện tại vào localStorage để dùng lại sau này
+            localStorage.setItem('oauth_server_url', serverUrl);
+            localStorage.setItem('oauth_redirect_uri', redirectUri);
+            
+            log(`🔄 Redirecting to Google Login: ${googleAuthUrl}`);
+            
+            // Mở cửa sổ mới để đăng nhập với Google
+            window.open(googleAuthUrl, '_blank', 'width=600,height=700');
+        });
+
+        // Copy access token
+        document.getElementById('copyTokenBtn').addEventListener('click', async () => {
+            const tokenArea = document.getElementById('tokenDisplay');
+            if (!tokenArea.value) {
+                showStatus('loginStatus', 'No token to copy', 'danger');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(tokenArea.value);
+                showStatus('loginStatus', 'Access token copied to clipboard! 📋', 'success');
+                log('📋 Access token copied to clipboard');
+            } catch(e) {
+                // Fallback for older browsers
+                tokenArea.select();
+                document.execCommand('copy');
+                showStatus('loginStatus', 'Access token copied! 📋', 'success');
+                log('📋 Access token copied to clipboard');
+            }
+        });
+
+        // Manual refresh
+        document.getElementById('refreshBtn').addEventListener('click', refreshAccessToken);
+
+        // Add refresh token button
+        document.getElementById('addRefreshTokenBtn').addEventListener('click', () => {
+            const tokenInput = document.getElementById('refreshTokenInput');
+            const token = tokenInput.value.trim();
+
+            if (!token) {
+                showStatus('refreshTokenStatus', 'Please enter a refresh token', 'danger');
+                return;
+            }
+
+            if (addRefreshToken(token)) {
+                tokenInput.value = '';
+                showStatus('refreshTokenStatus', 'Refresh token added successfully! 🎉', 'success');
+                log('➕ New refresh token added to list');
+            }
+        });
+
+        // Enter key support for refresh token input
+        document.getElementById('refreshTokenInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('addRefreshTokenBtn').click();
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            if (!activeRefreshToken) {
+                showStatus('loginStatus', 'No active refresh token', 'danger');
+                return;
+            }
+            try {
+                await fetch(`${API_BASE}/logout`, {
+                    method: 'DELETE',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({refreshToken: activeRefreshToken})
+                });
+                // Tìm và xóa token khỏi danh sách
+                const activeTokenData = refreshTokens.find(t => t.token === activeRefreshToken);
+                if (activeTokenData) {
+                    removeRefreshToken(activeTokenData.id);
+                }
+                localStorage.removeItem('access_token');
+                showStatus('loginStatus', 'Logged out successfully! 👋', 'success');
+                log('👋 User logged out');
+                updateTokenInfo();
+
+                // Clear intervals
+                if (refreshInterval) clearInterval(refreshInterval);
+                if (countdownInterval) clearInterval(countdownInterval);
+            } catch(e) {
+                log('❌ Logout error: ' + e.message);
+                showStatus('loginStatus', 'Logout error', 'danger');
+                console.error(e);
+            }
+        });
+
+        // Update URL preview when server URL or redirect URI changes
+        function updateUrlPreview() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const redirectUri = document.getElementById('redirectUri').value;
+            const fullUrl = `${serverUrl}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
+            document.getElementById('fullUrlPreview').textContent = fullUrl;
+        }
+
+        // Add event listeners for URL preview updates
+        document.getElementById('serverUrl').addEventListener('change', updateUrlPreview);
+        document.getElementById('redirectUri').addEventListener('input', updateUrlPreview);
+
+        // Load saved values from localStorage if available
+        if (localStorage.getItem('oauth_server_url')) {
+            const savedServerUrl = localStorage.getItem('oauth_server_url');
+            const select = document.getElementById('serverUrl');
+
+            // Find the option with matching value
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === savedServerUrl) {
+                    select.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (localStorage.getItem('oauth_redirect_uri')) {
+            document.getElementById('redirectUri').value = localStorage.getItem('oauth_redirect_uri');
+        }
+
+        // Update preview initially
+        updateUrlPreview();
+
+        // Initialize
+        renderRefreshTokenList();
+        updateActiveTokenDisplay();
+        updateTokenInfo();
+
+        // Start countdown if token exists
+        const accessToken = localStorage.getItem('access_token');
+        if (accessToken && activeRefreshToken) {
+            countdownInterval = setInterval(updateCountdown, 1000);
+            refreshInterval = setInterval(autoRefresh, 10000);
+        }
+
+        log('🚀 Auth Dashboard initialized');
+    </script>
+</body>
+</html>
+

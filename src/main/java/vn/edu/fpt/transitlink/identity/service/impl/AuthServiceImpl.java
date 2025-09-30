@@ -1,0 +1,134 @@
+package vn.edu.fpt.transitlink.identity.service.impl;
+
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Service;
+import vn.edu.fpt.transitlink.identity.request.LoginRequest;
+import vn.edu.fpt.transitlink.identity.dto.TokenData;
+import vn.edu.fpt.transitlink.identity.entity.Account;
+import vn.edu.fpt.transitlink.identity.entity.RefreshToken;
+import vn.edu.fpt.transitlink.identity.entity.Role;
+import vn.edu.fpt.transitlink.identity.enumeration.RoleName;
+import vn.edu.fpt.transitlink.identity.enumeration.AuthErrorCode;
+import vn.edu.fpt.transitlink.identity.mapper.RoleMapper;
+import vn.edu.fpt.transitlink.identity.repository.AccountRepository;
+import vn.edu.fpt.transitlink.identity.security.userdetails.CustomUserDetailsService;
+import vn.edu.fpt.transitlink.shared.security.JwtService;
+import vn.edu.fpt.transitlink.identity.service.*;
+import vn.edu.fpt.transitlink.shared.security.CustomUserPrincipal;
+import vn.edu.fpt.transitlink.shared.exception.BusinessException;
+
+import java.util.Set;
+
+@RequiredArgsConstructor
+@Service
+public class AuthServiceImpl implements AuthService {
+    private final AuthenticationManager authenticationManager;
+    private final AccountRepository accountRepository;
+    private final RefreshTokenService refreshTokenService;
+    private final JwtService jwtService;
+    private final CustomUserDetailsService userDetailsService;
+    private final RoleService roleService;
+    private final RoleMapper roleMapper;
+    private final GoogleTokenVerifierService googleTokenVerifierService;
+
+    @Override
+    public TokenData login(LoginRequest loginRequest) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.identifier(),
+                            loginRequest.password()
+                    )
+            );
+            CustomUserPrincipal userPrincipal = (CustomUserPrincipal) authentication.getPrincipal();
+
+            if (userPrincipal.getEmailVerified() == null || !userPrincipal.getEmailVerified()) {
+                throw new BusinessException(AuthErrorCode.EMAIL_NOT_VERIFIED);
+            }
+
+            RefreshToken refreshToken = refreshTokenService.createRefreshToken(userPrincipal);
+            return buildTokenData(userPrincipal, refreshToken);
+
+        } catch (BadCredentialsException e) {
+            throw new BusinessException(AuthErrorCode.INVALID_CREDENTIALS, e);
+        }
+    }
+
+    @Override
+    public TokenData refresh(String requestRefreshToken) {
+        try {
+            RefreshToken refreshToken = refreshTokenService.findByToken(requestRefreshToken)
+                    .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN));
+
+            refreshTokenService.verifyExpiration(refreshToken);
+
+            CustomUserPrincipal userPrincipal = (CustomUserPrincipal) userDetailsService.loadUserByUsername(refreshToken.getAccount().getEmail());
+            return buildTokenData(userPrincipal, refreshToken);
+
+        } catch (Exception e) {
+            throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN, e);
+        }
+    }
+
+
+    @Override
+    public void logout(String refreshToken) {
+        refreshTokenService.deleteByToken(refreshToken);
+    }
+
+    private TokenData buildTokenData(CustomUserPrincipal userPrincipal, RefreshToken refreshToken) {
+        String accessToken = jwtService.generateAccessToken(userPrincipal);
+        return new TokenData(
+                accessToken,
+                refreshToken.getToken(),
+                jwtService.getAccessTokenExpiration()
+        );
+    }
+
+    @Override
+    public TokenData loginWithGoogleMobile(String idTokenString) {
+        GoogleIdToken.Payload payload = googleTokenVerifierService.verify(idTokenString);
+        String email = payload.getEmail();
+        String firstName = (String) payload.get("given_name");
+        String lastName = (String) payload.get("family_name");
+        String avatarUrl = (String) payload.get("picture");
+
+        Account account = accountRepository.findByEmail(email)
+                .orElseGet(() -> {
+                    Account newAcc = new Account();
+                    newAcc.setEmail(email);
+                    newAcc.setFirstName(firstName);
+                    newAcc.setLastName(lastName);
+                    newAcc.setAvatarUrl(avatarUrl);
+                    newAcc.setEmailVerified(true);
+                    newAcc.setProfileCompleted(false);
+                    Role role = roleMapper.toEntity(roleService.findByName(RoleName.PASSENGER));
+                    newAcc.setRoles(Set.of(role));
+                    return accountRepository.save(newAcc);
+                });
+
+        CustomUserPrincipal userPrincipal = new CustomUserPrincipal(
+                account.getId(),
+                account.getEmail(),
+                account.getEmailVerified(),
+                account.getProfileCompleted(),
+                account.getPassword(),
+                account.getRoles()
+                        .stream()
+                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().toString()))
+                        .toList(),
+                null,
+                null,
+                null
+        );
+
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(userPrincipal);
+        return buildTokenData(userPrincipal, refreshToken);
+    }
+}

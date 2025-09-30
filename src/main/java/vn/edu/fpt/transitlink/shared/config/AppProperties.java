@@ -10,6 +10,7 @@ public record AppProperties(
         Storage storage,
         Security security
 ) {
+
     public record Storage(
             String provider,
             Path rootPath,
@@ -18,13 +19,28 @@ public record AppProperties(
 
     public record Security(
             List<String> permitAll,
-            Cors cors
+            Cors cors,
+            Jwt jwt,
+            Oauth2 oauth2
     ) {
         public record Cors(
                 List<String> allowedOrigins,
                 List<String> allowedMethods,
                 List<String> allowedHeaders,
                 boolean allowCredentials
+        ) {}
+
+        public record Jwt(
+                String secret,
+                AccessToken accessToken,
+                RefreshToken refreshToken
+        ) {
+            public record AccessToken(long expiration) {}
+            public record RefreshToken(long expiration) {}
+        }
+
+        public record Oauth2(
+                List<String> redirectUris
         ) {}
     }
 }

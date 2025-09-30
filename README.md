@@ -1,7 +1,7 @@
 # 🚍 Transit Link Backend
 [![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=sep490_g80_transit-link-backend)
 
-[![pipeline status](https://gitlab.com/sep490_g80/transit-link-backend/badges/main/pipeline.svg)](https://gitlab.com/sep490_g80/transit-link-backend/-/commits/main)
+[![pipeline status](https://gitlab.com/sep490_g80/transit-link-backend/badges/dev/pipeline.svg)](https://gitlab.com/sep490_g80/transit-link-backend/-/commits/dev)
 [![Latest Release](https://gitlab.com/sep490_g80/transit-link-backend/-/badges/release.svg)](https://gitlab.com/sep490_g80/transit-link-backend/-/releases)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=sep490_g80_transit-link-backend&metric=bugs)](https://sonarcloud.io/summary/new_code?id=sep490_g80_transit-link-backend)
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=sep490_g80_transit-link-backend&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=sep490_g80_transit-link-backend)
