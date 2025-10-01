@@ -1,7 +1,5 @@
 package vn.edu.fpt.transitlink.identity.service;
 
-import com.google.common.collect.FluentIterable;
-import org.jspecify.annotations.Nullable;
 import vn.edu.fpt.transitlink.identity.dto.ImportPassengerResultDTO;
 import vn.edu.fpt.transitlink.identity.dto.PassengerDTO;
 import vn.edu.fpt.transitlink.identity.request.CreatePassengerRequest;
@@ -19,6 +17,7 @@ public interface PassengerService {
     PassengerDTO updatePassenger(UUID id, UpdatePassengerRequest request);
     PassengerDTO deletePassenger(UUID deleteId, UUID deletedBy);
     PassengerDTO restorePassenger(UUID id);
+    UUID getAccountIdByPassengerId(UUID passengerId);
 
     // List and paginate passengers
     List<PassengerDTO> getPassengers(int page, int size);

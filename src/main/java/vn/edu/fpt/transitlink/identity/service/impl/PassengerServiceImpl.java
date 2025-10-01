@@ -172,6 +172,13 @@ public class PassengerServiceImpl implements PassengerService {
         return mapToPassengerDTO(savedPassenger, restoredAccount);
     }
 
+    @Override
+    public UUID getAccountIdByPassengerId(UUID passengerId) {
+        return passengerRepository.findById(passengerId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.PASSENGER_NOT_FOUND))
+                .getAccountId();
+    }
+
     @Cacheable(value = "passengersPage", key = "'page:' + #page + ':size:' + #size")
     @Override
     public List<PassengerDTO> getPassengers(int page, int size) {
