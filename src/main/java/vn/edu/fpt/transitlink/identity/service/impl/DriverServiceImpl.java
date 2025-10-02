@@ -147,6 +147,13 @@ public class DriverServiceImpl implements DriverService {
     }
 
     @Override
+    public UUID getAccountIdByDriverId(UUID driverId) {
+        return driverRepository.findById(driverId)
+                .map(Driver::getAccountId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.DRIVER_NOT_FOUND));
+    }
+
+    @Override
     public DriverInfo getDriverInfoById(UUID driverId) {
         return driverRepository.findById(driverId)
                 .map(driver -> {

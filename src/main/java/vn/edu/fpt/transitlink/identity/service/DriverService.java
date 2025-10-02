@@ -15,6 +15,7 @@ public interface DriverService {
     DriverDTO updateDriver(UUID id, UpdateDriverRequest request);
     DriverDTO deleteDriver(UUID deleteId, UUID deletedBy);
     DriverDTO restoreDriver(UUID id);
+    UUID getAccountIdByDriverId(UUID driverId);
 
     DriverInfo getDriverInfoById(UUID driverId);
     List<DriverInfo> getDriverInfosByIds(List<UUID> driverIds);

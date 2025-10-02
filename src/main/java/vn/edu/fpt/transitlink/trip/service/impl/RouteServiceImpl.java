@@ -282,14 +282,14 @@ public class RouteServiceImpl implements RouteService {
             request.setTitle("Có một chuyến đi mới đã được giao");
             request.setContent("Bạn có một chuyến đi mới đã được giao. Vui lòng kiểm tra và chuẩn bị cho chuyến đi.");
             request.setPriority(NotificationPriority.HIGH);
-            request.setAccountIds(List.of(route.getDriverId()));
+            request.setAccountIds(List.of(driverService.getAccountIdByDriverId(route.getDriverId())));
             NotificationDTO notificationDTO = notificationService.createNotification(request);
 
             notificationService.sendNotificationToMobile(notificationDTO.getId());
             // Gửi notification cho hành khách
             List<UUID> passengerIds = route.getStops().stream()
                     .flatMap(stop -> stop.getStopJourneyMappings().stream())
-                    .map(m -> m.getPassengerJourney().getPassengerId())
+                    .map(m -> passengerService.getAccountIdByPassengerId(m.getPassengerJourney().getPassengerId()))
                     .distinct()
                     .toList();
             DriverInfo driverInfo = driverService.getDriverInfoById(route.getDriverId());
@@ -428,7 +428,7 @@ public class RouteServiceImpl implements RouteService {
         createPassengerNotificationRequest.setContent("Chuyến đi của bạn đã bắt đầu. Vui lòng chuẩn bị.");
         List<UUID> passengerIds = route.getStops().stream()
                 .flatMap(stop -> stop.getStopJourneyMappings().stream())
-                .map(m -> m.getPassengerJourney().getPassengerId())
+                .map(m -> passengerService.getAccountIdByPassengerId(m.getPassengerJourney().getPassengerId()))
                 .distinct()
                 .toList();
         createPassengerNotificationRequest.setAccountIds(passengerIds);
