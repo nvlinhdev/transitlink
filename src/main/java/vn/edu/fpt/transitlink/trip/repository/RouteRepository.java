@@ -42,7 +42,7 @@ public interface RouteRepository extends SoftDeletableRepository<Route, UUID> {
     @Query("SELECT r FROM Route r WHERE r.driverId = :driverId AND r.status = 'PUBLISHED' AND r.isDeleted = false")
     List<Route> findAllByDriverId(UUID driverId);
 
-    Optional<Route> findByIdAndStatus(UUID id, RouteStatus status);
+    Optional<Route> findById(UUID id);
 
     @Override
     @Modifying

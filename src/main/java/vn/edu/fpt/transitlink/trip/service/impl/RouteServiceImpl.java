@@ -325,7 +325,7 @@ public class RouteServiceImpl implements RouteService {
     @Transactional
     @Override
     public DriverRouteDetailDTO getDriverRouteById(UUID routeId) {
-        Route route = routeRepository.findByIdAndStatus(routeId, RouteStatus.PUBLISHED)
+        Route route = routeRepository.findById(routeId)
                 .orElseThrow(() -> new BusinessException(TripErrorCode.ROUTE_NOT_FOUND));
 
         VehicleDTO vehicle = vehicleService.getVehicle(route.getVehicleId());
