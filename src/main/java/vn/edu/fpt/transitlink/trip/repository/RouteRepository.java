@@ -39,7 +39,7 @@ public interface RouteRepository extends SoftDeletableRepository<Route, UUID> {
 
     Page<Route> findAllByCreatedByAndIsDeletedFalse(UUID createdBy, Pageable pageable);
 
-    @Query("SELECT r FROM Route r WHERE r.driverId = :driverId AND r.status = 'PUBLISHED' AND r.isDeleted = false")
+    @Query("SELECT r FROM Route r WHERE r.driverId = :driverId AND r.isDeleted = false")
     List<Route> findAllByDriverId(UUID driverId);
 
     Optional<Route> findById(UUID id);
